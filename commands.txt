@@ -1,0 +1,18 @@
+# Соберите образ
+docker build -t flask-dev .
+
+# Запустите контейнер с монтированием текущей папки
+docker run -d -p 5000:5000 -v "$(pwd)":/app --name flask-dev-container flask-dev
+
+# Выполнить команду в контейнере
+docker exec flask-dev-container ls -la
+
+# Заход в исполняемую папку, когда она вмонтированна
+docker exec -it flask-dev-container bash
+
+# Запустите контейнер с монтированием текущей папки и заход в нее
+# не работает
+docker run -d -it -v "$(pwd)":/app -p 5000:5000 --name flask-dev-container flask-dev
+
+# Взаимодействие с контейнером.
+docker cp flask-dev-container:/app/server.py ./server-backup.py
