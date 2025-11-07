@@ -22,4 +22,3 @@ EXPOSE $PORT
 
 # CMD ["исполняемый_файл", "параметр1", "параметр2"]
 CMD ["python", "server.py"]
-RUN python client.py

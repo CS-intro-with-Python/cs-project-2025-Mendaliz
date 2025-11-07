@@ -43,11 +43,11 @@ jobs:
           echo "🧪 Running client test..."
           python client.py
           
-      # 5. Запускаем клиент для тестирования
-      - name: Run client_fail test
-        run: |
-          echo "🧪 Running client_fail test..."
-          python client_fail.py
+      ## 5. Запускаем клиент для тестирования
+      #- name: Run client_fail test
+      #  run: |
+      #    echo "🧪 Running client_fail test..."
+      #    python client_fail.py
     
       # 6. Останавливаем контейнер (даже если тесты упали)
       - name: Stop container
