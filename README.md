@@ -1,38 +1,106 @@
 [![Review Assignment Due Date](https://classroom.github.com/assets/deadline-readme-button-22041afd0340ce965d47ae6ef1cefeee28c7c493a6346c4f15d667ab976d596c.svg)](https://classroom.github.com/a/DESIFpxz)
-# CS_2024_project
+# CS_2024_project - Flask Docker Application
 
 ## Description
 
-Describe the project in 2-3 sentences (You can use more). 
+This is a client-server Flask application containerized with Docker. The project demonstrates modern development practices including REST API implementation, containerization, CI/CD pipelines, and automated testing. The application features a Flask server with multiple endpoints and a client for testing API responses.
 
 ## Setup
 
-Describe the steps to set up the environment and run the application. This can be a bash script or docker commands.
+### Using Docker (Recommended)
+```bash
+# Build the Docker image
+docker build -t flask-app .
 
-```
-Your commands
+# Run the container
+docker run -d -p 5000:5000 --name flask-container flask-app
 
-```
+# Test the application
+curl http://localhost:8080/hello
+Using Docker Compose
+bash
+# Start the application with docker-compose
+docker-compose up -d
 
-## Requirements
+# View logs
+docker-compose logs -f
+Local Development
+bash
+# Install dependencies
+pip install -r requirements.txt
 
-Describe technologies, libraries, languages you are using (this can be updated in the future).
+# Run the server
+python server.py
 
-## Features
+# In another terminal, test with client
+python client.py
+Requirements
+Backend Framework: Flask 2.3.3
 
-Describe the main features the application performs.
+Programming Language: Python 3.9+
 
-* Feature 1
-* Feature 2
+Containerization: Docker + Docker Compose
 
-## Git
+CI/CD: GitHub Actions
 
-Specify which branch will store the latest stable version of the application
+Deployment: Railway.app
 
-## Success Criteria
+Testing: Custom client with HTTP requests
 
-Describe the criteria by which the success of the project can be determined
-(this will be updated in the future)
+Dependencies: See requirements.txt
 
-* Criteria 1
+Features
+RESTful API with multiple endpoints (/hello, /user/<name>, /search)
 
+Docker containerization for easy deployment
+
+Continuous Integration with GitHub Actions
+
+Continuous Deployment to Railway.app
+
+Automated health checks and testing
+
+Environment variable configuration
+
+Colored output and GitHub Actions annotations
+
+Live deployment at: https://your-app-name.railway.app
+
+Git
+Stable Branch: main
+The main branch always contains the latest stable version of the application. Feature development happens in separate branches and is merged via pull requests after passing all tests.
+
+Success Criteria
+✅ Application successfully builds and runs in Docker container
+
+✅ All API endpoints return correct HTTP status codes and responses
+
+✅ CI/CD pipeline passes all automated tests on each commit
+
+✅ Application is automatically deployed to Railway.app
+
+✅ Client can successfully communicate with the server
+
+✅ Code follows best practices and includes proper documentation
+
+✅ Health checks confirm application is running correctly
+
+API Endpoints
+GET /hello - Returns greeting message
+
+GET /user/<username> - Returns personalized greeting
+
+GET /search?q=<query> - Returns search query information
+
+Deployment
+The application is automatically deployed to Railway when changes are pushed to the main branch. The live version is available at the provided Railway URL.
+
+Testing
+Run the test client to verify all endpoints:
+
+bash
+python client.py
+For colored output and GitHub Actions annotations:
+
+bash
+python client_colored.py
