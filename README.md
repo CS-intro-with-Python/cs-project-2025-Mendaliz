@@ -5,9 +5,11 @@
 
 This is a client-server Flask application containerized with Docker. The project demonstrates modern development practices including REST API implementation, containerization, CI/CD pipelines, and automated testing. The application features a Flask server with multiple endpoints and a client for testing API responses.
 
+url: cs-project-2025-mendaliz-production.up.railway.app
+
 ## Setup
 
-### Using Docker (Recommended)
+## Using Docker (Recommended)
 ```bash
 # Build the Docker image
 docker build -t flask-app .
@@ -104,3 +106,4 @@ For colored output and GitHub Actions annotations:
 
 bash
 python client_colored.py
+'''
