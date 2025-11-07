@@ -62,7 +62,7 @@ jobs:
           
           # Проверяем изнутри контейнера
           echo "🔍 Testing from inside container:"
-          docker exec flask-server curl -s http://localhost:5000/ || echo "Cannot connect inside container"
+          docker exec flask-server curl -s http://localhost:8080/ || echo "Cannot connect inside container"
           
           # Запускаем клиент
           python client.py
