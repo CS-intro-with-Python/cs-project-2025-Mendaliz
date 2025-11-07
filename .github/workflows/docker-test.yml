@@ -38,10 +38,10 @@ jobs:
           docker logs flask-server || echo "No logs yet"
           
       # 5. Запускаем клиент для тестирования
-      - name: Run client test
-        run: |
-          echo "🧪 Running client test..."
-          python client.py
+      #- name: Run client test
+      #  run: |
+      #    echo "🧪 Running client test..."
+      #    python client.py
 
       - name: Run client test careful
         run: |
