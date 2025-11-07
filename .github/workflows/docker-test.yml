@@ -50,22 +50,30 @@ jobs:
           # Проверяем что контейнер запущен
           echo "📊 Checking container status:"
           docker ps
-          docker ps -a
           
           # Проверяем логи сервера
           echo "📋 Server logs:"
-          docker logs flask-server || echo "No logs available"
+          docker logs flask-server
           
-          # Проверяем проброс портов
-          echo "🔌 Checking port mapping:"
-          docker port flask-server
+          # Проверяем изнутри контейнера с Python (вместо curl)
+          echo "🔍 Testing from inside container using Python:"
+          docker exec flask-server python -c "
+          import requests
+          try:
+              response = requests.get('http://localhost:8080/', timeout=5)
+              print(f'✅ INSIDE CONTAINER: Status {response.status_code}')
+              print(f'Response: {response.text}')
+          except Exception as e:
+              print(f'❌ INSIDE CONTAINER ERROR: {e}')
+          "
           
-          # Проверяем изнутри контейнера
-          echo "🔍 Testing from inside container:"
-          docker exec flask-server curl -s http://localhost:8080/ || echo "Cannot connect inside container"
+          # Проверяем с хоста
+          echo "🔌 Testing from host:"
+          curl -s http://localhost:8080/ && echo "✅ Host test successful" || echo "❌ Host test failed"
           
-          # Запускаем клиент
-          python client.py
+          # Запускаем клиент с правильным портом
+          echo "🚀 Running client test..."
+          PORT=8080 python client.py
           
       ## 5. Запускаем клиент для тестирования
       #- name: Run client_fail test
