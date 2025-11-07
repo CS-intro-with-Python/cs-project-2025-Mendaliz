@@ -43,7 +43,7 @@ jobs:
           echo "🧪 Running client test..."
           python client.py
 
-      - name: Run client test
+      - name: Run client test careful
         run: |
           echo "🧪 Running client test..."
           
