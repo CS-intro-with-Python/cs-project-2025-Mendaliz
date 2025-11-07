@@ -25,7 +25,7 @@ jobs:
       - name: Run Docker container
         run: |
           echo "🚀 Starting Flask server in Docker..."
-          docker run -d -p 5000:5000 --name flask-server flask-app
+          docker run -d -p 8080:8080 --name flask-server flask-app
           echo "⏳ Waiting for server to start..."
           sleep 10
           

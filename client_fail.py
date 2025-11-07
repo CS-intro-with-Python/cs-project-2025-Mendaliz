@@ -1,19 +1,22 @@
 import requests
 import sys
 
+PORT = int(os.environ.get('PORT', 8080))
+OK, ERR, RST = "\033[32m", "\033[31m", "\033[0m"
+
 def test_server_always_fail():
     try:
-        response = requests.get('http://localhost:5000/', timeout=5)
+        response = requests.get(f"http://localhost:{PORT}/", timeout=5)
         
-        print(f"Response status code: {response.status_code}")
-        print(f"Response content: {response.text}")
+        print(f"{ERR}Response status code: {response.status_code}{RST}")
+        print(f"{ERR}Response content: {response.text}{RST}")
         
         # Этот клиент ВСЕГДА завершается с ошибкой
-        print("❌ FORCED FAIL: This client always fails for testing")
+        print(f"{ERR}❌ FORCED FAIL: This client always fails for testing{RST}")
         sys.exit(1)  # Всегда ошибка - выход с кодом 1
             
     except Exception as e:
-        print(f"❌ FAIL: {e}")
+        print(f"{ERR}❌ FAIL: {e}{RST}")
         sys.exit(1)
 
 if __name__ == '__main__':
