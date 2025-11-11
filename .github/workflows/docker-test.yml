@@ -27,7 +27,7 @@ jobs:
           echo "🚀 Starting Flask server in Docker..."
           docker run -d -p 8080:8080 --name flask-server flask-app
           echo "⏳ Waiting for server to start..."
-          sleep 10
+          sleep 5
           
       # 4. Проверяем что контейнер запущен
       - name: Check container status
@@ -38,50 +38,25 @@ jobs:
           docker logs flask-server || echo "No logs yet"
           
       # 5. Запускаем клиент для тестирования
-      #- name: Run client test
-      #  run: |
-      #    echo "🧪 Running client test..."
-      #    python client.py
-
-      - name: Run client test careful
+      - name: Run client test
         run: |
           echo "🧪 Running client test..."
+          python client.py
           
-          # Проверяем что контейнер запущен
-          echo "📊 Checking container status:"
-          docker ps
-          
-          # Проверяем логи сервера
-          echo "📋 Server logs:"
-          docker logs flask-server
-          
-          # Проверяем изнутри контейнера с Python (вместо curl)
-          echo "🔍 Testing from inside container using Python:"
-          docker exec flask-server python -c "
-          import requests
-          try:
-              response = requests.get('http://localhost:8080/', timeout=5)
-              print(f'✅ INSIDE CONTAINER: Status {response.status_code}')
-              print(f'Response: {response.text}')
-          except Exception as e:
-              print(f'❌ INSIDE CONTAINER ERROR: {e}')
-          "
-          
-          # Проверяем с хоста
-          echo "🔌 Testing from host:"
-          curl -s http://localhost:8080/ && echo "✅ Host test successful" || echo "❌ Host test failed"
-          
-          # Запускаем клиент с правильным портом
-          echo "🚀 Running client test..."
-          PORT=8080 python client.py
-          
-      ## 5. Запускаем клиент для тестирования
+      ## 6. Запускаем клиент для тестирования
       #- name: Run client_fail test
       #  run: |
       #    echo "🧪 Running client_fail test..."
       #    python client_fail.py
     
-      # 6. Останавливаем контейнер (даже если тесты упали)
+      # 7. Success notification
+      - name: Success notification
+        if: success()
+        run: |
+          echo "::notice title=All Tests Passed::✅ Docker health check completed successfully!"
+          echo "🎉 ${OK}ALL CHECKS PASSED${RST} - Server is running correctly"
+
+      # 8. Останавливаем контейнер
       - name: Stop container
         if: always()
         run: |
