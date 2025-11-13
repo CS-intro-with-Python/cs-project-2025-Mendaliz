@@ -47,8 +47,6 @@ Continuous Deployment to Railway.app
 
 Automated health checks and testing
 
-Environment variable configuration inside container
-
 Colored output and GitHub Actions annotations
 
 Live deployment at: http://cs-project-2025-mendaliz-production.up.railway.app
