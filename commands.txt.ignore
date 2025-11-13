@@ -20,4 +20,4 @@ docker run -d -it -v "$(pwd)":/app -p 5000:5000 --name flask-dev-container flask
 docker cp flask-dev-container:/app/server.py ./server-backup.py
 
 Modifiable from container and host.
-Variable host/port 
+Variable host/port
