@@ -13,7 +13,7 @@ url: http://cs-project-2025-mendaliz-production.up.railway.app
 docker build -t flask-app .
 
 # Run the container
-docker run -d -p 5000:5000 --name flask-container flask-app
+docker run -d -p 8080:8080 --name flask-container flask-app
 
 # Test the application
 curl http://localhost:8080/
@@ -37,7 +37,7 @@ Dependencies: See requirements.txt
 
 ## Features
 
-RESTful API with one endpoint(/)
+RESTful API with one endpoint( / )
 
 Docker containerization for easy deployment
 
@@ -47,7 +47,7 @@ Continuous Deployment to Railway.app
 
 Automated health checks and testing
 
-Environment variable configuration
+Environment variable configuration inside container
 
 Colored output and GitHub Actions annotations
 

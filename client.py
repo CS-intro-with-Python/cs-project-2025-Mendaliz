@@ -1,12 +1,11 @@
 import requests
 import sys
-import os
 
 OK, ERR, RST = "\033[32m", "\033[31m", "\033[0m"
 
 def test_server():
-    port = int(os.environ.get('PORT', 8080))
-    host = os.environ.get('HOST', 'localhost')
+    port = 8080
+    host = 'localhost'
     
     try:
         response = requests.get(f"http://{host}:{port}/", timeout=5)
