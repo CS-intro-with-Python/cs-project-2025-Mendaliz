@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+
+{% block title %}Login - CookBook{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header text-center">
+                <h3 class="mb-0">CookBook</h3>
+                <small class="text-muted">Save and improve your recipes</small>
+            </div>
+            <div class="card-body">
+                <ul class="nav nav-tabs mb-3" id="authTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="login-tab" data-bs-toggle="tab" 
+                                data-bs-target="#login" type="button">
+                            Login
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="register-tab" data-bs-toggle="tab" 
+                                data-bs-target="#register" type="button">
+                            Register
+                        </button>
+                    </li>
+                </ul>
+                
+                <div class="tab-content" id="authTabsContent">
+                    <!-- Login Tab -->
+                    <div class="tab-pane fade show active" id="login" role="tabpanel">
+                        <div class="mb-3">
+                            <label for="loginEmail" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="loginEmail" 
+                                   placeholder="your@email.com">
+                        </div>
+                        <div class="mb-3">
+                            <label for="loginPassword" class="form-label">Password</label>
+                            <input type="password" class="form-control" id="loginPassword" 
+                                   placeholder="Your password">
+                        </div>
+                        <button class="btn btn-primary w-100" onclick="login()">
+                            Login
+                        </button>
+                    </div>
+                    
+                    <!-- Register Tab -->
+                    <div class="tab-pane fade" id="register" role="tabpanel">
+                        <div class="mb-3">
+                            <label for="registerEmail" class="form-label">Email</label>
+                            <input type="email" class="form-control" id="registerEmail" 
+                                   placeholder="your@email.com">
+                        </div>
+                        <div class="mb-3">
+                            <label for="registerPassword" class="form-label">Password</label>
+                            <input type="password" class="form-control" id="registerPassword" 
+                                   placeholder="At least 6 characters">
+                        </div>
+                        <div class="mb-3">
+                            <label for="confirmPassword" class="form-label">Confirm Password</label>
+                            <input type="password" class="form-control" id="confirmPassword" 
+                                   placeholder="Repeat password">
+                        </div>
+                        <button class="btn btn-success w-100" onclick="register()">
+                            Register
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="text-center mt-3">
+            <small class="text-muted">
+                This is a demo app. Data is stored in memory and will be lost on restart.
+            </small>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    async function request(url, method='GET', data=null) {
+        try {
+            const options = { method };
+            if (data) {
+                options.headers = {'Content-Type': 'application/json'};
+                options.body = JSON.stringify(data);
+            }
+            const response = await fetch(url, options);
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || `HTTP ${response.status}`);
+            }
+            return await response.json();
+        } catch (error) {
+            console.error('Request failed:', error);
+            alert('Error: ' + error.message);
+            return null;
+        }
+    }
+
+    async function login() {
+        const email = document.getElementById('loginEmail').value.trim();
+        const password = document.getElementById('loginPassword').value.trim();
+        
+        if (!email || !password) {
+            alert('Please enter email and password');
+            return;
+        }
+        
+        const result = await request('/api/login', 'POST', {
+            email, password
+        });
+        
+        if (result) {
+            window.location.href = '/';
+        }
+    }
+
+    async function register() {
+        const email = document.getElementById('registerEmail').value.trim();
+        const password = document.getElementById('registerPassword').value.trim();
+        const confirm = document.getElementById('confirmPassword').value.trim();
+        
+        if (!email || !password) {
+            alert('Please enter email and password');
+            return;
+        }
+        
+        if (password !== confirm) {
+            alert('Passwords do not match');
+            return;
+        }
+        
+        if (password.length < 6) {
+            alert('Password must be at least 6 characters');
+            return;
+        }
+        
+        const result = await request('/api/register', 'POST', {
+            email, password
+        });
+        
+        if (result) {
+            alert('Registration successful! Please login.');
+            // Переключаем на вкладку логина
+            const loginTab = new bootstrap.Tab(document.getElementById('login-tab'));
+            loginTab.show();
+            // Очищаем поля
+            document.getElementById('registerEmail').value = '';
+            document.getElementById('registerPassword').value = '';
+            document.getElementById('confirmPassword').value = '';
+        }
+    }
+
+    // Обработка нажатия Enter
+    document.addEventListener('DOMContentLoaded', function() {
+        const inputs = document.querySelectorAll('input[type="email"], input[type="password"]');
+        inputs.forEach(input => {
+            input.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    const activeTab = document.querySelector('.tab-pane.active');
+                    if (activeTab.id === 'login') {
+                        login();
+                    } else {
+                        register();
+                    }
+                }
+            });
+        });
+    });
+</script>
+{% endblock %}
