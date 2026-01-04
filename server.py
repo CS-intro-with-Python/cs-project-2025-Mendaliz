@@ -6,7 +6,7 @@ import json
 app = Flask(__name__)
 app.secret_key = 'your-secret-key-here'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
-app.config['SQLALCHEMY_TRACK_MODITIONS'] = False
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
@@ -16,7 +16,7 @@ class User(db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     password = db.Column(db.String(120), nullable=False)
     username = db.Column(db.String(80))
-    created_at = db.Column(db.DateTime, default=datetime.now())
+    created_at = db.Column(db.DateTime, default=datetime.now)
 
 class Recipe(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -24,15 +24,10 @@ class Recipe(db.Model):
     title = db.Column(db.String(200), nullable=False)
     url = db.Column(db.String(500))
     content = db.Column(db.Text)
-    type = db.Column(db.String(20), default='saved')  # 'saved' или 'verified'
-    original_recipe_id = db.Column(db.Integer)  # для verified рецептов
-    created_at = db.Column(db.DateTime, default=datetime.now())
+    created_at = db.Column(db.DateTime, default=datetime.now)
     
     # JSON поле для тегов
     tags = db.Column(db.Text, default='[]')  # храним как JSON строку
-    
-    # JSON поле для заметок
-    notes = db.Column(db.Text, default='[]')  # храним как JSON строку
 
 # Создаем таблицы при первом запуске
 with app.app_context():
@@ -134,9 +129,7 @@ def create_recipe():
         title=data['title'],
         url=data.get('url', ''),
         content=data.get('content', ''),
-        type='saved',
-        tags=json.dumps(data.get('tags', [])),
-        notes=json.dumps([])  # начинаем с пустого списка заметок
+        tags=json.dumps(data.get('tags', []))
     )
     
     db.session.add(new_recipe)
@@ -144,8 +137,7 @@ def create_recipe():
     
     return jsonify({
         'id': new_recipe.id,
-        'title': new_recipe.title,
-        'type': new_recipe.type
+        'title': new_recipe.title
     }), 201
 
 # Получить рецепты пользователя
@@ -155,12 +147,7 @@ def get_recipes():
         return jsonify({'error': 'Not authenticated'}), 401
     
     # Базовый запрос
-    query = Recipe.query.filter_by(user_id=session['user_id'])
-    
-    # Фильтрация по типу
-    recipe_type = request.args.get('type')
-    if recipe_type in ['saved', 'verified']:
-        query = query.filter_by(type=recipe_type)
+    query = Recipe.query.filter_by(user_id=session['user_id']).order_by(Recipe.created_at.desc())
     
     # Фильтрация по тегу
     tag = request.args.get('tag')
@@ -175,82 +162,13 @@ def get_recipes():
         result.append({
             'id': recipe.id,
             'title': recipe.title,
-            'type': recipe.type,
             'tags': json.loads(recipe.tags),
-            'notes_count': len(json.loads(recipe.notes))
+            'created_at': recipe.created_at.strftime('%Y-%m-%d %H:%M')
         })
     
     return jsonify({'recipes': result})
 
-# Добавить заметку
-@app.route('/api/recipes/<int:recipe_id>/notes', methods=['POST'])
-def add_note(recipe_id):
-    if 'user_id' not in session:
-        return jsonify({'error': 'Not authenticated'}), 401
-    
-    data = request.json
-    
-    if not data or 'text' not in data:
-        return jsonify({'error': 'Need text'}), 400
-    
-    recipe = Recipe.query.filter_by(id=recipe_id, user_id=session['user_id']).first()
-    if not recipe:
-        return jsonify({'error': 'Recipe not found'}), 404
-    
-    notes = json.loads(recipe.notes)
-    
-    # При добавлении заметки рецепт перестает быть верифицированным
-    if recipe.type == 'verified':
-        recipe.type = 'saved'
-    
-    # Создаем новую заметку
-    new_note = {
-        'id': len(notes) + 1,
-        'text': data['text']
-    }
-    notes.append(new_note)
-    
-    # Обновляем рецепт
-    recipe.notes = json.dumps(notes)
-    db.session.commit()
-    
-    return jsonify(new_note), 201
-
-# Создать подтвержденную версию
-@app.route('/api/recipes/<int:recipe_id>/verify', methods=['POST'])
-def verify_recipe(recipe_id):
-    if 'user_id' not in session:
-        return jsonify({'error': 'Not authenticated'}), 401
-    
-    original = Recipe.query.filter_by(id=recipe_id, user_id=session['user_id']).first()
-    if not original:
-        return jsonify({'error': 'Recipe not found'}), 404
-    
-    notes = json.loads(original.notes)
-    notes_text = "\n".join([f"Note {n['id']}: {n['text']}" for n in notes])
-    
-    # Создаем верифицированную версию
-    verified_recipe = Recipe(
-        user_id=session['user_id'],
-        title=original.title + " (verified)",
-        url=original.url,
-        content=original.content + "\n\n---\nNotes:\n" + notes_text,
-        type='verified',
-        original_recipe_id=original.id,
-        tags=original.tags,
-        notes=json.dumps([])  # новая версия начинается с чистых заметок
-    )
-    
-    db.session.add(verified_recipe)
-    db.session.commit()
-    
-    return jsonify({
-        'id': verified_recipe.id,
-        'title': verified_recipe.title,
-        'type': verified_recipe.type
-    }), 201
-
-# Получить один рецепт (этот уже есть)
+# Получить один рецепт
 @app.route('/api/recipes/<int:recipe_id>', methods=['GET'])
 def get_recipe(recipe_id):
     if 'user_id' not in session:
@@ -265,10 +183,8 @@ def get_recipe(recipe_id):
         'title': recipe.title,
         'url': recipe.url,
         'content': recipe.content,
-        'type': recipe.type,
         'tags': json.loads(recipe.tags),
-        'notes': json.loads(recipe.notes),
-        'original_recipe_id': recipe.original_recipe_id
+        'created_at': recipe.created_at.strftime('%Y-%m-%d %H:%M')
     })
 
 # Обновить рецепт
@@ -284,28 +200,19 @@ def update_recipe(recipe_id):
         return jsonify({'error': 'Recipe not found'}), 404
     
     # Обновляем поля
-    if 'title' in data:
-        recipe.title = data['title']
-    if 'url' in data:
-        recipe.url = data.get('url', '')
-    if 'content' in data:
-        recipe.content = data.get('content', '')
-    if 'tags' in data:
-        recipe.tags = json.dumps(data.get('tags', []))
-    
-    # При обновлении рецепт перестает быть верифицированным
-    if recipe.type == 'verified':
-        recipe.type = 'saved'
+    recipe.title = data.get('title', recipe.title)
+    recipe.url = data.get('url', recipe.url)
+    recipe.content = data.get('content', recipe.content)
+    recipe.tags = json.dumps(data.get('tags', []))
     
     db.session.commit()
     
     return jsonify({
         'id': recipe.id,
-        'title': recipe.title,
-        'type': recipe.type
+        'title': recipe.title
     }), 200
 
-# Удалить рецепт (этот уже есть)
+# Удалить рецепт
 @app.route('/api/recipes/<int:recipe_id>', methods=['DELETE'])
 def delete_recipe(recipe_id):
     if 'user_id' not in session:

@@ -25,6 +25,7 @@
                 <div class="mb-3">
                     <label class="form-label">Tags (comma separated)</label>
                     <input type="text" class="form-control" id="tags" placeholder="breakfast, easy, dessert">
+                    <small class="text-muted">Separate with commas</small>
                 </div>
                 <button class="btn btn-primary w-100" onclick="addRecipe()">Save Recipe</button>
             </div>
@@ -36,27 +37,23 @@
             </div>
             <div class="card-body">
                 <div class="mb-3">
-                    <label class="form-label">Recipe Type</label>
-                    <select class="form-select" id="filterType" onchange="loadRecipes()">
-                        <option value="">All types</option>
-                        <option value="saved">Saved</option>
-                        <option value="verified">Verified</option>
-                    </select>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label">Tags</label>
+                    <label class="form-label">Filter by Tag</label>
                     <div id="tagsList">
                         <small class="text-muted">Loading tags...</small>
                     </div>
                 </div>
-                <button class="btn btn-outline-secondary w-100" onclick="clearFilters()">Clear Filters</button>
+                <div class="d-grid gap-2">
+                    <button class="btn btn-outline-primary" onclick="loadRecipes()">
+                        Show All Recipes
+                    </button>
+                </div>
             </div>
         </div>
     </div>
 
     <div class="col-md-8">
         <div class="d-flex justify-content-between align-items-center mb-3">
-            <h2>My Recipes</h2>
+            <h2 id="pageTitle">All Recipes</h2>
             <button class="btn btn-outline-success" onclick="loadRecipes()">
                 Refresh
             </button>
@@ -69,34 +66,11 @@
         </div>
     </div>
 </div>
-
-<!-- Модальное окно для заметок -->
-<div class="modal fade" id="notesModal" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">Add Note</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <input type="hidden" id="currentRecipeId">
-                <div class="mb-3">
-                    <label class="form-label">Note</label>
-                    <textarea class="form-control" id="noteText" rows="3" placeholder="What did you change? How did it turn out?"></textarea>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary" onclick="saveNote()">Save Note</button>
-            </div>
-        </div>
-    </div>
-</div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-    let currentRecipeId = null;
+    let currentTag = null;
 
     async function request(url, method='GET', data=null) {
         try {
@@ -124,16 +98,16 @@
         }
     }
 
-    async function loadRecipes() {
-        const type = document.getElementById('filterType').value;
+    async function loadRecipes(tag = null) {
+        currentTag = tag;
         
         let url = '/api/recipes';
-        if (type) {
-            url += `?type=${type}`;
+        if (tag) {
+            url += `?tag=${encodeURIComponent(tag)}`;
         }
         
         const data = await request(url);
-        displayRecipes(data.recipes);
+        displayRecipes(data.recipes, tag);
         loadTags();
     }
 
@@ -146,21 +120,23 @@
             return;
         }
         
-        let html = '<div class="d-flex flex-wrap">';
+        let html = '<div class="d-flex flex-wrap gap-1">';
         data.tags.forEach(tag => {
+            const isActive = currentTag === tag.name;
             html += `
-                <span class="badge bg-secondary me-1 mb-1">
+                <button class="btn btn-sm ${isActive ? 'btn-primary' : 'btn-outline-secondary'}" 
+                        onclick="filterByTag('${tag.name}')" 
+                        title="${tag.count} recipes">
                     ${tag.name} (${tag.count})
-                </span>
+                </button>
             `;
         });
         html += '</div>';
         tagsList.innerHTML = html;
     }
 
-    function clearFilters() {
-        document.getElementById('filterType').value = '';
-        loadRecipes();
+    function filterByTag(tag) {
+        loadRecipes(tag);
     }
 
     async function addRecipe() {
@@ -185,91 +161,67 @@
         }
     }
 
-    function displayRecipes(recipes) {
+    function displayRecipes(recipes, tag = null) {
         const container = document.getElementById('recipesContainer');
+        const pageTitle = document.getElementById('pageTitle');
+        
+        // Обновляем заголовок
+        if (tag) {
+            pageTitle.textContent = `Recipes with tag: ${tag}`;
+        } else {
+            pageTitle.textContent = 'All Recipes';
+        }
         
         if (!recipes || recipes.length === 0) {
-            container.innerHTML = '<div class="text-center text-muted my-5"><p>No recipes found. Add your first recipe!</p></div>';
+            container.innerHTML = `
+                <div class="text-center text-muted my-5">
+                    <p>${tag ? `No recipes found with tag: ${tag}` : 'No recipes found. Add your first recipe!'}</p>
+                </div>
+            `;
             return;
         }
         
         let html = '';
         recipes.forEach(recipe => {
-            const typeClass = recipe.type === 'verified' ? 'verified-recipe' : 'saved-recipe';
-            const typeBadge = recipe.type === 'verified' ? 
-                '<span class="badge bg-success">Verified</span>' : 
-                '<span class="badge bg-warning text-dark">Saved</span>';
-            
             html += `
-                <div class="card recipe-card ${typeClass} mb-3">
+                <div class="card recipe-card mb-3">
                     <div class="card-body">
-                        <h5 class="card-title">${recipe.title}</h5>
-                        <div class="mb-2">
-                            ${typeBadge}
-                            <span class="badge bg-info ms-2">${recipe.notes_count} notes</span>
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div>
+                                <h5 class="card-title mb-1">${recipe.title}</h5>
+                                <small class="text-muted">Created: ${recipe.created_at}</small>
+                            </div>
+                            <div class="dropdown">
+                                <button class="btn btn-sm btn-outline-secondary" type="button" 
+                                        data-bs-toggle="dropdown">
+                                    <i class="bi bi-three-dots"></i> Actions
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="/recipe/${recipe.id}">View</a></li>
+                                    <li><a class="dropdown-item" href="/recipe/${recipe.id}/edit">Edit</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item text-danger" href="#" onclick="deleteRecipe(${recipe.id})">Delete</a></li>
+                                </ul>
+                            </div>
                         </div>
                         
                         ${recipe.tags.length > 0 ? `
-                            <div class="mb-2">
-                                ${recipe.tags.map(tag => `<span class="badge bg-light text-dark me-1">${tag}</span>`).join('')}
+                            <div class="mt-2">
+                                ${recipe.tags.map(tag => `
+                                    <span class="badge bg-light text-dark me-1 mb-1" 
+                                          onclick="filterByTag('${tag}')" 
+                                          style="cursor: pointer;">
+                                        ${tag}
+                                    </span>
+                                `).join('')}
                             </div>
                         ` : ''}
-                        
-					    <div class="d-flex gap-2">
-					        <a href="/recipe/${recipe.id}" class="btn btn-sm btn-outline-primary">
-					            View Details
-					        </a>
-					        <button class="btn btn-sm btn-outline-success" onclick="verifyRecipe(${recipe.id})">
-					            Make Verified
-					        </button>
-					        <button class="btn btn-sm btn-outline-danger" onclick="deleteRecipe(${recipe.id})">
-					            Delete
-					        </button>
-					    </div>
                     </div>
                 </div>
             `;
         });
         
         container.innerHTML = html;
-    }
-
-    async function saveNote() {
-        const text = document.getElementById('noteText').value.trim();
-        
-        if (!text) {
-            alert('Please enter a note');
-            return;
-        }
-        
-        const note = await request(`/api/recipes/${currentRecipeId}/notes`, 'POST', {text});
-        
-        if (note) {
-            alert('Note added successfully!');
-            const modal = bootstrap.Modal.getInstance(document.getElementById('notesModal'));
-            modal.hide();
-            loadRecipes();
-        }
-    }
-
-    async function verifyRecipe(recipeId) {
-        if (!confirm('Create a verified version of this recipe? This will combine all notes into a new recipe.')) {
-            return;
-        }
-        
-        const newRecipe = await request(`/api/recipes/${recipeId}/verify`, 'POST');
-        
-        if (newRecipe) {
-            alert('Verified version created!');
-            loadRecipes();
-        }
-    }
-
-    async function viewRecipe(recipeId) {
-        const recipe = await request(`/api/recipes/${recipeId}`);
-        if (recipe) {
-            alert(JSON.stringify(recipe, null, 2));
-        }
     }
 
     async function deleteRecipe(recipeId) {
@@ -280,7 +232,7 @@
         const result = await request(`/api/recipes/${recipeId}`, 'DELETE');
         if (result && result.success) {
             alert('Recipe deleted successfully!');
-            loadRecipes();
+            loadRecipes(currentTag);
         }
     }
 
@@ -299,18 +251,16 @@
 
 <style>
     .recipe-card {
-        border-left: 4px solid #dee2e6;
+        border-left: 4px solid #4a9eff;
         transition: all 0.2s;
     }
     .recipe-card:hover {
         transform: translateY(-2px);
         box-shadow: 0 4px 8px rgba(0,0,0,0.1);
     }
-    .saved-recipe {
-        border-left-color: #ffc107;
-    }
-    .verified-recipe {
-        border-left-color: #198754;
+    .badge:hover {
+        background-color: #4a9eff !important;
+        color: white !important;
     }
 </style>
 {% endblock %}

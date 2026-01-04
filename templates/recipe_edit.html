@@ -83,13 +83,6 @@
         
         if (!recipeData) return;
         
-        // Проверяем, можно ли редактировать
-        if (recipeData.type === 'verified') {
-            alert('Verified recipes cannot be edited. Please create a new saved version.');
-            window.location.href = `/recipe/${recipeId}`;
-            return;
-        }
-        
         // Заполняем форму
         document.getElementById('title').value = recipeData.title || '';
         document.getElementById('url').value = recipeData.url || '';

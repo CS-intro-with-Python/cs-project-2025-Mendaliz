@@ -12,7 +12,7 @@
             </div>
             <div>
                 <a href="/" class="btn btn-outline-secondary me-2">Back to Recipes</a>
-                <button id="editBtn" class="btn btn-primary me-2" onclick="editRecipe()">Edit</button>
+                <a id="editBtn" href="#" class="btn btn-primary me-2">Edit Recipe</a>
                 <button class="btn btn-outline-danger" onclick="deleteRecipe()">Delete</button>
             </div>
         </div>
@@ -35,35 +35,6 @@
                 <div>
                     <h5>Instructions</h5>
                     <pre id="recipeContent" class="bg-light p-3 rounded" style="white-space: pre-wrap;"></pre>
-                </div>
-            </div>
-        </div>
-
-        <div class="card mb-4">
-            <div class="card-header">
-                <h5 class="mb-0">Add Note</h5>
-            </div>
-            <div class="card-body">
-                <div class="mb-3">
-                    <textarea class="form-control" id="noteText" rows="3" 
-                              placeholder="What did you change? How did it turn out?"></textarea>
-                </div>
-                <button class="btn btn-primary" onclick="addNote()">Add Note</button>
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">Notes</h5>
-                <button class="btn btn-outline-success btn-sm" onclick="verifyRecipe()">
-                    Create Verified Version
-                </button>
-            </div>
-            <div class="card-body">
-                <div id="notesList">
-                    <div class="text-center text-muted py-3">
-                        No notes yet. Add your first note above!
-                    </div>
                 </div>
             </div>
         </div>
@@ -118,11 +89,8 @@
         document.getElementById('recipeTitle').textContent = recipeData.title;
         
         // Мета информация
-        const typeBadge = recipeData.type === 'verified' ? 
-            '<span class="badge bg-success me-2">Verified</span>' : 
-            '<span class="badge bg-warning text-dark me-2">Saved</span>';
-        document.getElementById('recipeMeta').innerHTML = typeBadge + 
-            `<small>Created: ${new Date().toLocaleDateString()}</small>`;
+        document.getElementById('recipeMeta').innerHTML = 
+            `<small>Created: ${recipeData.created_at}</small>`;
         
         // URL
         if (recipeData.url) {
@@ -137,7 +105,11 @@
         const tagsDiv = document.getElementById('recipeTags');
         if (recipeData.tags && recipeData.tags.length > 0) {
             tagsDiv.innerHTML = recipeData.tags.map(tag => 
-                `<span class="badge bg-light text-dark me-1 mb-1">${tag}</span>`
+                `<span class="badge bg-light text-dark me-1 mb-1" 
+                      onclick="window.location.href='/?tag=${encodeURIComponent(tag)}'"
+                      style="cursor: pointer;">
+                    ${tag}
+                </span>`
             ).join('');
         } else {
             tagsDiv.innerHTML = '<span class="text-muted">No tags</span>';
@@ -147,66 +119,7 @@
         document.getElementById('recipeContent').textContent = recipeData.content || 'No instructions provided.';
         
         // Кнопка редактирования
-        document.getElementById('editBtn').style.display = recipeData.type === 'verified' ? 'none' : 'inline-block';
-        
-        // Загружаем заметки
-        loadNotes();
-    }
-
-    async function loadNotes() {
-        const notesList = document.getElementById('notesList');
-        
-        if (!recipeData.notes || recipeData.notes.length === 0) {
-            notesList.innerHTML = '<div class="text-center text-muted py-3">No notes yet. Add your first note above!</div>';
-            return;
-        }
-        
-        let html = '';
-        recipeData.notes.forEach(note => {
-            html += `
-                <div class="card mb-2">
-                    <div class="card-body">
-                        <p class="mb-0">${note.text}</p>
-                    </div>
-                </div>
-            `;
-        });
-        notesList.innerHTML = html;
-    }
-
-    async function addNote() {
-        const text = document.getElementById('noteText').value.trim();
-        
-        if (!text) {
-            alert('Please enter a note');
-            return;
-        }
-        
-        const note = await request(`/api/recipes/${recipeId}/notes`, 'POST', {text});
-        
-        if (note) {
-            alert('Note added successfully!');
-            document.getElementById('noteText').value = '';
-            // Перезагружаем рецепт и заметки
-            loadRecipe();
-        }
-    }
-
-    async function verifyRecipe() {
-        if (!confirm('Create a verified version of this recipe? This will combine all notes into a new recipe.')) {
-            return;
-        }
-        
-        const newRecipe = await request(`/api/recipes/${recipeId}/verify`, 'POST');
-        
-        if (newRecipe) {
-            alert('Verified version created! Redirecting to new recipe...');
-            window.location.href = `/recipe/${newRecipe.id}`;
-        }
-    }
-
-    function editRecipe() {
-        window.location.href = `/recipe/${recipeId}/edit`;
+        document.getElementById('editBtn').href = `/recipe/${recipeId}/edit`;
     }
 
     async function deleteRecipe() {
