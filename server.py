@@ -1,13 +1,42 @@
 from flask import Flask, request, jsonify, render_template, session, redirect, url_for
+from flask_sqlalchemy import SQLAlchemy
+from datetime import datetime
 import json
 
 app = Flask(__name__)
-app.secret_key = 'your-secret-key-here'  # Важно: измените в продакшене
+app.secret_key = 'your-secret-key-here'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
+app.config['SQLALCHEMY_TRACK_MODITIONS'] = False
 
-# Простое хранилище в памяти
-users = []
-recipes = []
-next_id = 1
+db = SQLAlchemy(app)
+
+# Модели
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(120), unique=True, nullable=False)
+    password = db.Column(db.String(120), nullable=False)
+    username = db.Column(db.String(80))
+    created_at = db.Column(db.DateTime, default=datetime.now())
+
+class Recipe(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, nullable=False)
+    title = db.Column(db.String(200), nullable=False)
+    url = db.Column(db.String(500))
+    content = db.Column(db.Text)
+    type = db.Column(db.String(20), default='saved')  # 'saved' или 'verified'
+    original_recipe_id = db.Column(db.Integer)  # для verified рецептов
+    created_at = db.Column(db.DateTime, default=datetime.now())
+    
+    # JSON поле для тегов
+    tags = db.Column(db.Text, default='[]')  # храним как JSON строку
+    
+    # JSON поле для заметок
+    notes = db.Column(db.Text, default='[]')  # храним как JSON строку
+
+# Создаем таблицы при первом запуске
+with app.app_context():
+    db.create_all()
 
 # Главная страница
 @app.route('/')
@@ -38,23 +67,26 @@ def register():
         return jsonify({'error': 'Need email and password'}), 400
     
     # Проверяем, есть ли такой email
-    for user in users:
-        if user['email'] == data['email']:
-            return jsonify({'error': 'Email exists'}), 400
+    existing_user = User.query.filter_by(email=data['email']).first()
+    if existing_user:
+        return jsonify({'error': 'Email exists'}), 400
     
-    global next_id
-    user_id = next_id
-    next_id += 1
+    # Создаем пользователя
+    username = data['email'].split('@')[0]
+    new_user = User(
+        email=data['email'],
+        password=data['password'],
+        username=username
+    )
     
-    new_user = {
-        'id': user_id,
-        'email': data['email'],
-        'password': data['password'],
-        'username': data['email'].split('@')[0]  # Используем часть email как username
-    }
+    db.session.add(new_user)
+    db.session.commit()
     
-    users.append(new_user)
-    return jsonify({'id': user_id, 'email': data['email'], 'username': new_user['username']}), 201
+    return jsonify({
+        'id': new_user.id,
+        'email': new_user.email,
+        'username': new_user.username
+    }), 201
 
 # Вход
 @app.route('/api/login', methods=['POST'])
@@ -64,14 +96,19 @@ def login():
     if not data or 'email' not in data or 'password' not in data:
         return jsonify({'error': 'Need email and password'}), 400
     
-    for user in users:
-        if user['email'] == data['email'] and user['password'] == data['password']:
-            session['user_id'] = user['id']
-            session['username'] = user['username']
-            session['email'] = user['email']
-            return jsonify({'id': user['id'], 'email': user['email'], 'username': user['username']}), 200
+    user = User.query.filter_by(email=data['email'], password=data['password']).first()
+    if not user:
+        return jsonify({'error': 'Wrong email or password'}), 401
     
-    return jsonify({'error': 'Wrong email or password'}), 401
+    session['user_id'] = user.id
+    session['username'] = user.username
+    session['email'] = user.email
+    
+    return jsonify({
+        'id': user.id,
+        'email': user.email,
+        'username': user.username
+    }), 200
 
 # Проверить аутентификацию
 @app.route('/api/check-auth')
@@ -91,23 +128,25 @@ def create_recipe():
     if not data or 'title' not in data:
         return jsonify({'error': 'Need title'}), 400
     
-    global next_id
-    recipe_id = next_id
-    next_id += 1
+    # Создаем рецепт
+    new_recipe = Recipe(
+        user_id=session['user_id'],
+        title=data['title'],
+        url=data.get('url', ''),
+        content=data.get('content', ''),
+        type='saved',
+        tags=json.dumps(data.get('tags', [])),
+        notes=json.dumps([])  # начинаем с пустого списка заметок
+    )
     
-    new_recipe = {
-        'id': recipe_id,
-        'user_id': session['user_id'],
-        'title': data['title'],
-        'url': data.get('url', ''),
-        'content': data.get('content', ''),
-        'type': 'saved',  # saved или verified
-        'tags': data.get('tags', []),
-        'notes': []
-    }
+    db.session.add(new_recipe)
+    db.session.commit()
     
-    recipes.append(new_recipe)
-    return jsonify(new_recipe), 201
+    return jsonify({
+        'id': new_recipe.id,
+        'title': new_recipe.title,
+        'type': new_recipe.type
+    }), 201
 
 # Получить рецепты пользователя
 @app.route('/api/recipes', methods=['GET'])
@@ -115,19 +154,33 @@ def get_recipes():
     if 'user_id' not in session:
         return jsonify({'error': 'Not authenticated'}), 401
     
-    user_id = session['user_id']
-    tag = request.args.get('tag')
+    # Базовый запрос
+    query = Recipe.query.filter_by(user_id=session['user_id'])
+    
+    # Фильтрация по типу
     recipe_type = request.args.get('type')
+    if recipe_type in ['saved', 'verified']:
+        query = query.filter_by(type=recipe_type)
     
-    filtered = [r for r in recipes if r['user_id'] == user_id]
-    
+    # Фильтрация по тегу
+    tag = request.args.get('tag')
     if tag:
-        filtered = [r for r in filtered if tag in r['tags']]
+        query = query.filter(Recipe.tags.contains(f'"{tag}"'))
     
-    if recipe_type:
-        filtered = [r for r in filtered if r['type'] == recipe_type]
+    recipes_list = query.all()
     
-    return jsonify({'recipes': filtered})
+    # Преобразуем в словари
+    result = []
+    for recipe in recipes_list:
+        result.append({
+            'id': recipe.id,
+            'title': recipe.title,
+            'type': recipe.type,
+            'tags': json.loads(recipe.tags),
+            'notes_count': len(json.loads(recipe.notes))
+        })
+    
+    return jsonify({'recipes': result})
 
 # Добавить заметку
 @app.route('/api/recipes/<int:recipe_id>/notes', methods=['POST'])
@@ -140,17 +193,28 @@ def add_note(recipe_id):
     if not data or 'text' not in data:
         return jsonify({'error': 'Need text'}), 400
     
-    for recipe in recipes:
-        if recipe['id'] == recipe_id and recipe['user_id'] == session['user_id']:
-            note_id = len(recipe['notes']) + 1
-            note = {
-                'id': note_id,
-                'text': data['text']
-            }
-            recipe['notes'].append(note)
-            return jsonify(note), 201
+    recipe = Recipe.query.filter_by(id=recipe_id, user_id=session['user_id']).first()
+    if not recipe:
+        return jsonify({'error': 'Recipe not found'}), 404
     
-    return jsonify({'error': 'Recipe not found'}), 404
+    notes = json.loads(recipe.notes)
+    
+    # При добавлении заметки рецепт перестает быть верифицированным
+    if recipe.type == 'verified':
+        recipe.type = 'saved'
+    
+    # Создаем новую заметку
+    new_note = {
+        'id': len(notes) + 1,
+        'text': data['text']
+    }
+    notes.append(new_note)
+    
+    # Обновляем рецепт
+    recipe.notes = json.dumps(notes)
+    db.session.commit()
+    
+    return jsonify(new_note), 201
 
 # Создать подтвержденную версию
 @app.route('/api/recipes/<int:recipe_id>/verify', methods=['POST'])
@@ -158,36 +222,33 @@ def verify_recipe(recipe_id):
     if 'user_id' not in session:
         return jsonify({'error': 'Not authenticated'}), 401
     
-    original = None
-    for recipe in recipes:
-        if recipe['id'] == recipe_id and recipe['user_id'] == session['user_id']:
-            original = recipe
-            break
-    
+    original = Recipe.query.filter_by(id=recipe_id, user_id=session['user_id']).first()
     if not original:
         return jsonify({'error': 'Recipe not found'}), 404
     
-    global next_id
-    new_id = next_id
-    next_id += 1
+    notes = json.loads(original.notes)
+    notes_text = "\n".join([f"Note {n['id']}: {n['text']}" for n in notes])
     
-    # Создаем улучшенную версию
-    notes_text = "\n".join([f"Note {n['id']}: {n['text']}" for n in original['notes']])
+    # Создаем верифицированную версию
+    verified_recipe = Recipe(
+        user_id=session['user_id'],
+        title=original.title + " (verified)",
+        url=original.url,
+        content=original.content + "\n\n---\nNotes:\n" + notes_text,
+        type='verified',
+        original_recipe_id=original.id,
+        tags=original.tags,
+        notes=json.dumps([])  # новая версия начинается с чистых заметок
+    )
     
-    new_recipe = {
-        'id': new_id,
-        'user_id': session['user_id'],
-        'title': original['title'] + " (verified)",
-        'url': original['url'],
-        'content': original['content'] + "\n\n---\nNotes:\n" + notes_text,
-        'type': 'verified',
-        'tags': original['tags'],
-        'notes': [],
-        'original_id': recipe_id
-    }
+    db.session.add(verified_recipe)
+    db.session.commit()
     
-    recipes.append(new_recipe)
-    return jsonify(new_recipe), 201
+    return jsonify({
+        'id': verified_recipe.id,
+        'title': verified_recipe.title,
+        'type': verified_recipe.type
+    }), 201
 
 # Получить один рецепт
 @app.route('/api/recipes/<int:recipe_id>', methods=['GET'])
@@ -195,11 +256,35 @@ def get_recipe(recipe_id):
     if 'user_id' not in session:
         return jsonify({'error': 'Not authenticated'}), 401
     
-    for recipe in recipes:
-        if recipe['id'] == recipe_id and recipe['user_id'] == session['user_id']:
-            return jsonify(recipe)
+    recipe = Recipe.query.filter_by(id=recipe_id, user_id=session['user_id']).first()
+    if not recipe:
+        return jsonify({'error': 'Recipe not found'}), 404
     
-    return jsonify({'error': 'Recipe not found'}), 404
+    return jsonify({
+        'id': recipe.id,
+        'title': recipe.title,
+        'url': recipe.url,
+        'content': recipe.content,
+        'type': recipe.type,
+        'tags': json.loads(recipe.tags),
+        'notes': json.loads(recipe.notes),
+        'original_recipe_id': recipe.original_recipe_id
+    })
+
+# Удалить рецепт
+@app.route('/api/recipes/<int:recipe_id>', methods=['DELETE'])
+def delete_recipe(recipe_id):
+    if 'user_id' not in session:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    recipe = Recipe.query.filter_by(id=recipe_id, user_id=session['user_id']).first()
+    if not recipe:
+        return jsonify({'error': 'Recipe not found'}), 404
+    
+    db.session.delete(recipe)
+    db.session.commit()
+    
+    return jsonify({'success': True, 'message': 'Recipe deleted'})
 
 # Получить все теги пользователя
 @app.route('/api/tags')
@@ -207,14 +292,23 @@ def get_tags():
     if 'user_id' not in session:
         return jsonify({'error': 'Not authenticated'}), 401
     
-    user_tags = set()
-    for recipe in recipes:
-        if recipe['user_id'] == session['user_id']:
-            user_tags.update(recipe['tags'])
+    # Получаем все рецепты пользователя
+    user_recipes = Recipe.query.filter_by(user_id=session['user_id']).all()
     
+    # Собираем уникальные теги
+    all_tags = set()
+    
+    for recipe in user_recipes:
+        tags = json.loads(recipe.tags)
+        all_tags.update(tags)
+    
+    # Считаем количество рецептов для каждого тега
     tags_with_count = []
-    for tag in user_tags:
-        count = sum(1 for r in recipes if r['user_id'] == session['user_id'] and tag in r['tags'])
+    for tag in all_tags:
+        count = Recipe.query.filter(
+            Recipe.user_id == session['user_id'],
+            Recipe.tags.contains(f'"{tag}"')
+        ).count()
         tags_with_count.append({'name': tag, 'count': count})
     
     return jsonify({'tags': tags_with_count})
