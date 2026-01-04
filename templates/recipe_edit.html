@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Recipe - CookBook{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h1>Edit Recipe</h1>
+            <div>
+                <a href="/recipe/{{ recipe_id }}" class="btn btn-outline-secondary me-2">Cancel</a>
+                <button class="btn btn-primary" onclick="saveRecipe()">Save Changes</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Title *</label>
+                    <input type="text" class="form-control" id="title" placeholder="Recipe name">
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Source URL (optional)</label>
+                    <input type="text" class="form-control" id="url" placeholder="https://example.com/recipe">
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Instructions</label>
+                    <textarea class="form-control" id="content" rows="10" 
+                              placeholder="Step-by-step instructions..."></textarea>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Tags (comma separated)</label>
+                    <input type="text" class="form-control" id="tags" 
+                           placeholder="breakfast, easy, dessert">
+                    <small class="text-muted">Separate tags with commas</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const recipeId = {{ recipe_id }};
+    let recipeData = null;
+
+    async function request(url, method='GET', data=null) {
+        try {
+            const options = { method };
+            if (data) {
+                options.headers = {'Content-Type': 'application/json'};
+                options.body = JSON.stringify(data);
+            }
+            const response = await fetch(url, options);
+            
+            if (!response.ok) {
+                if (response.status === 401) {
+                    window.location.href = '/auth';
+                    return;
+                }
+                if (response.status === 404) {
+                    window.location.href = '/';
+                    return;
+                }
+                const error = await response.json().catch(() => ({error: `HTTP ${response.status}`}));
+                throw new Error(error.error || `HTTP ${response.status}`);
+            }
+            
+            return await response.json();
+        } catch (error) {
+            console.error('Request failed:', error);
+            alert('Error: ' + error.message);
+            return null;
+        }
+    }
+
+    async function loadRecipe() {
+        recipeData = await request(`/api/recipes/${recipeId}`);
+        
+        if (!recipeData) return;
+        
+        // Проверяем, можно ли редактировать
+        if (recipeData.type === 'verified') {
+            alert('Verified recipes cannot be edited. Please create a new saved version.');
+            window.location.href = `/recipe/${recipeId}`;
+            return;
+        }
+        
+        // Заполняем форму
+        document.getElementById('title').value = recipeData.title || '';
+        document.getElementById('url').value = recipeData.url || '';
+        document.getElementById('content').value = recipeData.content || '';
+        document.getElementById('tags').value = recipeData.tags ? recipeData.tags.join(', ') : '';
+    }
+
+    async function saveRecipe() {
+        const title = document.getElementById('title').value.trim();
+        const url = document.getElementById('url').value.trim();
+        const content = document.getElementById('content').value.trim();
+        const tags = document.getElementById('tags').value.split(',').map(t => t.trim()).filter(t => t);
+        
+        if (!title) {
+            alert('Please enter a recipe title');
+            return;
+        }
+        
+        const updated = await request(`/api/recipes/${recipeId}`, 'PUT', {
+            title, url, content, tags
+        });
+        
+        if (updated) {
+            alert('Recipe updated successfully!');
+            window.location.href = `/recipe/${recipeId}`;
+        }
+    }
+
+    // Загружаем рецепт при загрузке страницы
+    document.addEventListener('DOMContentLoaded', function() {
+        loadRecipe();
+    });
+</script>
+{% endblock %}

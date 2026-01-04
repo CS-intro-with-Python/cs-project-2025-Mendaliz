@@ -1,0 +1,229 @@
+{% extends "base.html" %}
+
+{% block title %}Recipe - CookBook{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1 id="recipeTitle">Loading...</h1>
+                <div id="recipeMeta" class="text-muted"></div>
+            </div>
+            <div>
+                <a href="/" class="btn btn-outline-secondary me-2">Back to Recipes</a>
+                <button id="editBtn" class="btn btn-primary me-2" onclick="editRecipe()">Edit</button>
+                <button class="btn btn-outline-danger" onclick="deleteRecipe()">Delete</button>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-body">
+                <div class="mb-3">
+                    <h5>Source URL</h5>
+                    <p id="recipeUrl" class="mb-0">
+                        <a href="#" id="recipeUrlLink" target="_blank"></a>
+                        <span id="noUrl" class="text-muted">No URL provided</span>
+                    </p>
+                </div>
+                
+                <div class="mb-3">
+                    <h5>Tags</h5>
+                    <div id="recipeTags"></div>
+                </div>
+                
+                <div>
+                    <h5>Instructions</h5>
+                    <pre id="recipeContent" class="bg-light p-3 rounded" style="white-space: pre-wrap;"></pre>
+                </div>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">Add Note</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <textarea class="form-control" id="noteText" rows="3" 
+                              placeholder="What did you change? How did it turn out?"></textarea>
+                </div>
+                <button class="btn btn-primary" onclick="addNote()">Add Note</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="mb-0">Notes</h5>
+                <button class="btn btn-outline-success btn-sm" onclick="verifyRecipe()">
+                    Create Verified Version
+                </button>
+            </div>
+            <div class="card-body">
+                <div id="notesList">
+                    <div class="text-center text-muted py-3">
+                        No notes yet. Add your first note above!
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    const recipeId = {{ recipe_id }};
+    let recipeData = null;
+
+    async function request(url, method='GET', data=null) {
+        try {
+            const options = { method };
+            if (data) {
+                options.headers = {'Content-Type': 'application/json'};
+                options.body = JSON.stringify(data);
+            }
+            const response = await fetch(url, options);
+            
+            if (!response.ok) {
+                if (response.status === 401) {
+                    window.location.href = '/auth';
+                    return;
+                }
+                if (response.status === 404) {
+                    window.location.href = '/';
+                    return;
+                }
+                const error = await response.json().catch(() => ({error: `HTTP ${response.status}`}));
+                throw new Error(error.error || `HTTP ${response.status}`);
+            }
+            
+            return await response.json();
+        } catch (error) {
+            console.error('Request failed:', error);
+            alert('Error: ' + error.message);
+            return null;
+        }
+    }
+
+    async function loadRecipe() {
+        recipeData = await request(`/api/recipes/${recipeId}`);
+        
+        if (!recipeData) return;
+        
+        // Обновляем заголовок страницы
+        document.title = recipeData.title + ' - CookBook';
+        
+        // Заполняем данные рецепта
+        document.getElementById('recipeTitle').textContent = recipeData.title;
+        
+        // Мета информация
+        const typeBadge = recipeData.type === 'verified' ? 
+            '<span class="badge bg-success me-2">Verified</span>' : 
+            '<span class="badge bg-warning text-dark me-2">Saved</span>';
+        document.getElementById('recipeMeta').innerHTML = typeBadge + 
+            `<small>Created: ${new Date().toLocaleDateString()}</small>`;
+        
+        // URL
+        if (recipeData.url) {
+            document.getElementById('recipeUrlLink').href = recipeData.url;
+            document.getElementById('recipeUrlLink').textContent = recipeData.url;
+            document.getElementById('noUrl').style.display = 'none';
+        } else {
+            document.getElementById('recipeUrlLink').style.display = 'none';
+        }
+        
+        // Теги
+        const tagsDiv = document.getElementById('recipeTags');
+        if (recipeData.tags && recipeData.tags.length > 0) {
+            tagsDiv.innerHTML = recipeData.tags.map(tag => 
+                `<span class="badge bg-light text-dark me-1 mb-1">${tag}</span>`
+            ).join('');
+        } else {
+            tagsDiv.innerHTML = '<span class="text-muted">No tags</span>';
+        }
+        
+        // Контент
+        document.getElementById('recipeContent').textContent = recipeData.content || 'No instructions provided.';
+        
+        // Кнопка редактирования
+        document.getElementById('editBtn').style.display = recipeData.type === 'verified' ? 'none' : 'inline-block';
+        
+        // Загружаем заметки
+        loadNotes();
+    }
+
+    async function loadNotes() {
+        const notesList = document.getElementById('notesList');
+        
+        if (!recipeData.notes || recipeData.notes.length === 0) {
+            notesList.innerHTML = '<div class="text-center text-muted py-3">No notes yet. Add your first note above!</div>';
+            return;
+        }
+        
+        let html = '';
+        recipeData.notes.forEach(note => {
+            html += `
+                <div class="card mb-2">
+                    <div class="card-body">
+                        <p class="mb-0">${note.text}</p>
+                    </div>
+                </div>
+            `;
+        });
+        notesList.innerHTML = html;
+    }
+
+    async function addNote() {
+        const text = document.getElementById('noteText').value.trim();
+        
+        if (!text) {
+            alert('Please enter a note');
+            return;
+        }
+        
+        const note = await request(`/api/recipes/${recipeId}/notes`, 'POST', {text});
+        
+        if (note) {
+            alert('Note added successfully!');
+            document.getElementById('noteText').value = '';
+            // Перезагружаем рецепт и заметки
+            loadRecipe();
+        }
+    }
+
+    async function verifyRecipe() {
+        if (!confirm('Create a verified version of this recipe? This will combine all notes into a new recipe.')) {
+            return;
+        }
+        
+        const newRecipe = await request(`/api/recipes/${recipeId}/verify`, 'POST');
+        
+        if (newRecipe) {
+            alert('Verified version created! Redirecting to new recipe...');
+            window.location.href = `/recipe/${newRecipe.id}`;
+        }
+    }
+
+    function editRecipe() {
+        window.location.href = `/recipe/${recipeId}/edit`;
+    }
+
+    async function deleteRecipe() {
+        if (!confirm('Are you sure you want to delete this recipe? This action cannot be undone.')) {
+            return;
+        }
+        
+        const result = await request(`/api/recipes/${recipeId}`, 'DELETE');
+        if (result && result.success) {
+            alert('Recipe deleted successfully!');
+            window.location.href = '/';
+        }
+    }
+
+    // Загружаем рецепт при загрузке страницы
+    document.addEventListener('DOMContentLoaded', function() {
+        loadRecipe();
+    });
+</script>
+{% endblock %}

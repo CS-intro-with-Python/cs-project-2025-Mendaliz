@@ -250,7 +250,7 @@ def verify_recipe(recipe_id):
         'type': verified_recipe.type
     }), 201
 
-# Получить один рецепт
+# Получить один рецепт (этот уже есть)
 @app.route('/api/recipes/<int:recipe_id>', methods=['GET'])
 def get_recipe(recipe_id):
     if 'user_id' not in session:
@@ -271,7 +271,41 @@ def get_recipe(recipe_id):
         'original_recipe_id': recipe.original_recipe_id
     })
 
-# Удалить рецепт
+# Обновить рецепт
+@app.route('/api/recipes/<int:recipe_id>', methods=['PUT'])
+def update_recipe(recipe_id):
+    if 'user_id' not in session:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    data = request.json
+    
+    recipe = Recipe.query.filter_by(id=recipe_id, user_id=session['user_id']).first()
+    if not recipe:
+        return jsonify({'error': 'Recipe not found'}), 404
+    
+    # Обновляем поля
+    if 'title' in data:
+        recipe.title = data['title']
+    if 'url' in data:
+        recipe.url = data.get('url', '')
+    if 'content' in data:
+        recipe.content = data.get('content', '')
+    if 'tags' in data:
+        recipe.tags = json.dumps(data.get('tags', []))
+    
+    # При обновлении рецепт перестает быть верифицированным
+    if recipe.type == 'verified':
+        recipe.type = 'saved'
+    
+    db.session.commit()
+    
+    return jsonify({
+        'id': recipe.id,
+        'title': recipe.title,
+        'type': recipe.type
+    }), 200
+
+# Удалить рецепт (этот уже есть)
 @app.route('/api/recipes/<int:recipe_id>', methods=['DELETE'])
 def delete_recipe(recipe_id):
     if 'user_id' not in session:
@@ -312,6 +346,20 @@ def get_tags():
         tags_with_count.append({'name': tag, 'count': count})
     
     return jsonify({'tags': tags_with_count})
+
+# Страница просмотра рецепта
+@app.route('/recipe/<int:recipe_id>')
+def view_recipe_page(recipe_id):
+    if 'user_id' not in session:
+        return redirect(url_for('auth_page'))
+    return render_template('recipe_view.html', recipe_id=recipe_id)
+
+# Страница редактирования рецепта
+@app.route('/recipe/<int:recipe_id>/edit')
+def edit_recipe_page(recipe_id):
+    if 'user_id' not in session:
+        return redirect(url_for('auth_page'))
+    return render_template('recipe_edit.html', recipe_id=recipe_id)
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
