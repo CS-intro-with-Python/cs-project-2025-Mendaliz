@@ -144,17 +144,14 @@
         
         if (result) {
             alert('Registration successful! Please login.');
-            // Переключаем на вкладку логина
             const loginTab = new bootstrap.Tab(document.getElementById('login-tab'));
             loginTab.show();
-            // Очищаем поля
             document.getElementById('registerEmail').value = '';
             document.getElementById('registerPassword').value = '';
             document.getElementById('confirmPassword').value = '';
         }
     }
 
-    // Обработка нажатия Enter
     document.addEventListener('DOMContentLoaded', function() {
         const inputs = document.querySelectorAll('input[type="email"], input[type="password"]');
         inputs.forEach(input => {

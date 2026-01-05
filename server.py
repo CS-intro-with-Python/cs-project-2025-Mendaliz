@@ -10,7 +10,6 @@ app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
-# Модели
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
@@ -26,35 +25,28 @@ class Recipe(db.Model):
     description = db.Column(db.Text)
     content = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.now)
-    
-    # JSON поле для тегов
-    tags = db.Column(db.Text, default='[]')  # храним как JSON строку
+    tags = db.Column(db.Text, default='[]')
 
-# Создаем таблицы при первом запуске
 with app.app_context():
     db.create_all()
 
-# Главная страница
 @app.route('/')
 def index():
     if 'user_id' not in session:
         return redirect(url_for('auth_page'))
     return render_template('index.html', username=session.get('username'))
 
-# Страница аутентификации
 @app.route('/auth')
 def auth_page():
     if 'user_id' in session:
         return redirect(url_for('index'))
     return render_template('auth.html')
 
-# Выйти
 @app.route('/logout')
 def logout():
     session.clear()
     return redirect(url_for('auth_page'))
 
-# Регистрация
 @app.route('/api/register', methods=['POST'])
 def register():
     data = request.json
@@ -62,12 +54,10 @@ def register():
     if not data or 'email' not in data or 'password' not in data:
         return jsonify({'error': 'Need email and password'}), 400
     
-    # Проверяем, есть ли такой email
     existing_user = User.query.filter_by(email=data['email']).first()
     if existing_user:
         return jsonify({'error': 'Email exists'}), 400
     
-    # Создаем пользователя
     username = data['email'].split('@')[0]
     new_user = User(
         email=data['email'],
@@ -84,7 +74,6 @@ def register():
         'username': new_user.username
     }), 201
 
-# Вход
 @app.route('/api/login', methods=['POST'])
 def login():
     data = request.json
@@ -106,14 +95,12 @@ def login():
         'username': user.username
     }), 200
 
-# Проверить аутентификацию
 @app.route('/api/check-auth')
 def check_auth():
     if 'user_id' in session:
         return jsonify({'authenticated': True, 'username': session.get('username')}), 200
     return jsonify({'authenticated': False}), 401
 
-# Создать рецепт
 @app.route('/api/recipes', methods=['POST'])
 def create_recipe():
     if 'user_id' not in session:
@@ -124,7 +111,6 @@ def create_recipe():
     if not data or 'title' not in data:
         return jsonify({'error': 'Need title'}), 400
     
-    # Создаем рецепт
     new_recipe = Recipe(
         user_id=session['user_id'],
         title=data['title'],
@@ -142,16 +128,13 @@ def create_recipe():
         'title': new_recipe.title
     }), 201
 
-# Получить рецепты пользователя
 @app.route('/api/recipes', methods=['GET'])
 def get_recipes():
     if 'user_id' not in session:
         return jsonify({'error': 'Not authenticated'}), 401
     
-    # Базовый запрос
     query = Recipe.query.filter_by(user_id=session['user_id']).order_by(Recipe.created_at.desc())
     
-    # Фильтрация по тегу
     tags = request.args.get('tags')
     if tags:
         for tag in tags.split(','):
@@ -159,7 +142,6 @@ def get_recipes():
     
     recipes_list = query.all()
     
-    # Преобразуем в словари
     result = []
     for recipe in recipes_list:
         result.append({
@@ -172,7 +154,6 @@ def get_recipes():
     
     return jsonify({'recipes': result})
 
-# Получить один рецепт
 @app.route('/api/recipes/<int:recipe_id>', methods=['GET'])
 def get_recipe(recipe_id):
     if 'user_id' not in session:
@@ -192,7 +173,6 @@ def get_recipe(recipe_id):
         'created_at': recipe.created_at.strftime('%Y-%m-%d %H:%M')
     })
 
-# Обновить рецепт
 @app.route('/api/recipes/<int:recipe_id>', methods=['PUT'])
 def update_recipe(recipe_id):
     if 'user_id' not in session:
@@ -204,7 +184,6 @@ def update_recipe(recipe_id):
     if not recipe:
         return jsonify({'error': 'Recipe not found'}), 404
     
-    # Обновляем поля
     recipe.title = data.get('title', recipe.title)
     recipe.url = data.get('url', recipe.url)
     recipe.description = data.get('description', recipe.description)
@@ -218,7 +197,6 @@ def update_recipe(recipe_id):
         'title': recipe.title
     }), 200
 
-# Удалить рецепт
 @app.route('/api/recipes/<int:recipe_id>', methods=['DELETE'])
 def delete_recipe(recipe_id):
     if 'user_id' not in session:
@@ -233,23 +211,19 @@ def delete_recipe(recipe_id):
     
     return jsonify({'success': True, 'message': 'Recipe deleted'})
 
-# Получить все теги пользователя
 @app.route('/api/tags')
 def get_tags():
     if 'user_id' not in session:
         return jsonify({'error': 'Not authenticated'}), 401
     
-    # Получаем все рецепты пользователя
     user_recipes = Recipe.query.filter_by(user_id=session['user_id']).all()
     
-    # Собираем уникальные теги
     all_tags = set()
     
     for recipe in user_recipes:
         tags = json.loads(recipe.tags)
         all_tags.update(tags)
     
-    # Считаем количество рецептов для каждого тега
     tags_with_count = []
     for tag in all_tags:
         count = Recipe.query.filter(
@@ -260,14 +234,12 @@ def get_tags():
     
     return jsonify({'tags': tags_with_count})
 
-# Страница просмотра рецепта
 @app.route('/recipe/<int:recipe_id>')
 def view_recipe_page(recipe_id):
     if 'user_id' not in session:
         return redirect(url_for('auth_page'))
     return render_template('recipe_view.html', recipe_id=recipe_id)
 
-# Страница редактирования рецепта
 @app.route('/recipe/<int:recipe_id>/edit')
 def edit_recipe_page(recipe_id):
     if 'user_id' not in session:
