@@ -26,6 +26,12 @@
                 </div>
                 
                 <div class="mb-3">
+                    <label class="form-label">Description</label>
+                    <textarea class="form-control" id="description" rows="3" 
+                              placeholder="Short meal description..."></textarea>
+                </div>
+                
+                <div class="mb-3">
                     <label class="form-label">Instructions</label>
                     <textarea class="form-control" id="content" rows="10" 
                               placeholder="Step-by-step instructions..."></textarea>
@@ -46,7 +52,6 @@
 {% block scripts %}
 <script>
     const recipeId = {{ recipe_id }};
-    let recipeData = null;
 
     async function request(url, method='GET', data=null) {
         try {
@@ -79,13 +84,13 @@
     }
 
     async function loadRecipe() {
-        recipeData = await request(`/api/recipes/${recipeId}`);
+        let recipeData = await request(`/api/recipes/${recipeId}`);
         
         if (!recipeData) return;
         
-        // Заполняем форму
         document.getElementById('title').value = recipeData.title || '';
         document.getElementById('url').value = recipeData.url || '';
+		document.getElementById('description').value = recipeData.description || '';
         document.getElementById('content').value = recipeData.content || '';
         document.getElementById('tags').value = recipeData.tags ? recipeData.tags.join(', ') : '';
     }
@@ -93,6 +98,7 @@
     async function saveRecipe() {
         const title = document.getElementById('title').value.trim();
         const url = document.getElementById('url').value.trim();
+		const description = document.getElementById('description').value.trim();
         const content = document.getElementById('content').value.trim();
         const tags = document.getElementById('tags').value.split(',').map(t => t.trim()).filter(t => t);
         
@@ -102,7 +108,7 @@
         }
         
         const updated = await request(`/api/recipes/${recipeId}`, 'PUT', {
-            title, url, content, tags
+            title, url, description, content, tags
         });
         
         if (updated) {
@@ -111,7 +117,6 @@
         }
     }
 
-    // Загружаем рецепт при загрузке страницы
     document.addEventListener('DOMContentLoaded', function() {
         loadRecipe();
     });

@@ -27,14 +27,19 @@
                     </p>
                 </div>
                 
-                <div class="mb-3">
-                    <h5>Tags</h5>
-                    <div id="recipeTags"></div>
+                <div>
+                    <h5>Description</h5>
+                    <pre id="descriptionContent" class="bg-light p-3 rounded" style="white-space: pre-wrap;"></pre>
                 </div>
                 
                 <div>
                     <h5>Instructions</h5>
                     <pre id="recipeContent" class="bg-light p-3 rounded" style="white-space: pre-wrap;"></pre>
+                </div>
+                
+                <div class="mb-3">
+                    <h5>Tags</h5>
+                    <div id="recipeTags"></div>
                 </div>
             </div>
         </div>
@@ -45,7 +50,6 @@
 {% block scripts %}
 <script>
     const recipeId = {{ recipe_id }};
-    let recipeData = null;
 
     async function request(url, method='GET', data=null) {
         try {
@@ -78,21 +82,15 @@
     }
 
     async function loadRecipe() {
-        recipeData = await request(`/api/recipes/${recipeId}`);
+        let recipeData = await request(`/api/recipes/${recipeId}`);
         
         if (!recipeData) return;
         
-        // Обновляем заголовок страницы
         document.title = recipeData.title + ' - CookBook';
-        
-        // Заполняем данные рецепта
         document.getElementById('recipeTitle').textContent = recipeData.title;
-        
-        // Мета информация
         document.getElementById('recipeMeta').innerHTML = 
             `<small>Created: ${recipeData.created_at}</small>`;
         
-        // URL
         if (recipeData.url) {
             document.getElementById('recipeUrlLink').href = recipeData.url;
             document.getElementById('recipeUrlLink').textContent = recipeData.url;
@@ -101,7 +99,9 @@
             document.getElementById('recipeUrlLink').style.display = 'none';
         }
         
-        // Теги
+        document.getElementById('descriptionContent').textContent = recipeData.description || 'No description provided.';
+        document.getElementById('recipeContent').textContent = recipeData.content || 'No instructions provided.';
+        
         const tagsDiv = document.getElementById('recipeTags');
         if (recipeData.tags && recipeData.tags.length > 0) {
             tagsDiv.innerHTML = recipeData.tags.map(tag => 
@@ -115,10 +115,6 @@
             tagsDiv.innerHTML = '<span class="text-muted">No tags</span>';
         }
         
-        // Контент
-        document.getElementById('recipeContent').textContent = recipeData.content || 'No instructions provided.';
-        
-        // Кнопка редактирования
         document.getElementById('editBtn').href = `/recipe/${recipeId}/edit`;
     }
 
@@ -134,7 +130,6 @@
         }
     }
 
-    // Загружаем рецепт при загрузке страницы
     document.addEventListener('DOMContentLoaded', function() {
         loadRecipe();
     });

@@ -19,6 +19,10 @@
                     <input type="text" class="form-control" id="url" placeholder="https://example.com/recipe">
                 </div>
                 <div class="mb-3">
+                    <label class="form-label">Description</label>
+                    <textarea class="form-control" id="description" rows="1" placeholder="Short description..."></textarea>
+                </div>
+                <div class="mb-3">
                     <label class="form-label">Instructions</label>
                     <textarea class="form-control" id="content" rows="3" placeholder="Step-by-step instructions..."></textarea>
                 </div>
@@ -166,6 +170,7 @@
     async function addRecipe() {
         const title = document.getElementById('title').value.trim();
         const url = document.getElementById('url').value.trim();
+		const description = document.getElementById('description').value.trim();
         const content = document.getElementById('content').value.trim();
         const tags = document.getElementById('tags').value.split(',').map(t => t.trim()).filter(t => t);
         
@@ -175,7 +180,7 @@
         }
         
         const recipe = await request('/api/recipes', 'POST', {
-            title, url, content, tags
+            title, url, description, content, tags
         });
         
         if (recipe) {
@@ -214,6 +219,7 @@
                             <div>
                                 <h5 class="card-title mb-1">${recipe.title}</h5>
                                 <small class="text-muted">Created: ${recipe.created_at}</small>
+								<p class="card-text mb-1">${recipe.description}</p>
                             </div>
 							<a class="btn btn-sm btn-outline-secondary" type="button" href="/recipe/${recipe.id}">
 								View
@@ -254,6 +260,7 @@
     function clearForm() {
         document.getElementById('title').value = '';
         document.getElementById('url').value = '';
+		document.getElementById('description').value = '';
         document.getElementById('content').value = '';
         document.getElementById('tags').value = '';
     }

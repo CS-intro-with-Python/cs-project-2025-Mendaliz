@@ -13,14 +13,6 @@ body {
     border-radius: 8px;
 }
 
-.saved-recipe {
-    border-left-color: #ffc107;
-}
-
-.verified-recipe {
-    border-left-color: #198754;
-}
-
 .tag-badge {
     cursor: pointer;
     transition: all 0.2s;

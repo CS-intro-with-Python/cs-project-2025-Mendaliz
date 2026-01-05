@@ -23,6 +23,7 @@ class Recipe(db.Model):
     user_id = db.Column(db.Integer, nullable=False)
     title = db.Column(db.String(200), nullable=False)
     url = db.Column(db.String(500))
+    description = db.Column(db.Text)
     content = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.now)
     
@@ -128,6 +129,7 @@ def create_recipe():
         user_id=session['user_id'],
         title=data['title'],
         url=data.get('url', ''),
+        description=data.get('description', ''),
         content=data.get('content', ''),
         tags=json.dumps(data.get('tags', []))
     )
@@ -163,6 +165,7 @@ def get_recipes():
         result.append({
             'id': recipe.id,
             'title': recipe.title,
+            'description': recipe.description,
             'tags': json.loads(recipe.tags),
             'created_at': recipe.created_at.strftime('%Y-%m-%d %H:%M')
         })
@@ -183,6 +186,7 @@ def get_recipe(recipe_id):
         'id': recipe.id,
         'title': recipe.title,
         'url': recipe.url,
+        'description': recipe.description,
         'content': recipe.content,
         'tags': json.loads(recipe.tags),
         'created_at': recipe.created_at.strftime('%Y-%m-%d %H:%M')
@@ -203,6 +207,7 @@ def update_recipe(recipe_id):
     # Обновляем поля
     recipe.title = data.get('title', recipe.title)
     recipe.url = data.get('url', recipe.url)
+    recipe.description = data.get('description', recipe.description)
     recipe.content = data.get('content', recipe.content)
     recipe.tags = json.dumps(data.get('tags', []))
     
