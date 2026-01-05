@@ -150,9 +150,10 @@ def get_recipes():
     query = Recipe.query.filter_by(user_id=session['user_id']).order_by(Recipe.created_at.desc())
     
     # Фильтрация по тегу
-    tag = request.args.get('tag')
-    if tag:
-        query = query.filter(Recipe.tags.contains(f'"{tag}"'))
+    tags = request.args.get('tags')
+    if tags:
+        for tag in tags.split(','):
+            query = query.filter(Recipe.tags.contains(f'"{tag}"'))
     
     recipes_list = query.all()
     

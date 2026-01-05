@@ -43,7 +43,7 @@
                     </div>
                 </div>
                 <div class="d-grid gap-2">
-                    <button class="btn btn-outline-primary" onclick="loadRecipes()">
+                    <button class="btn btn-outline-primary" onclick="loadRecipes(1)">
                         Show All Recipes
                     </button>
                 </div>
@@ -70,8 +70,6 @@
 
 {% block scripts %}
 <script>
-    let currentTag = null;
-
     async function request(url, method='GET', data=null) {
         try {
             const options = { method };
@@ -98,20 +96,24 @@
         }
     }
 
-    async function loadRecipes(tag = null) {
-        currentTag = tag;
-        
+    async function loadRecipes(without_tegs = 0) {
         let url = '/api/recipes';
-        if (tag) {
-            url += `?tag=${encodeURIComponent(tag)}`;
+
+		const urlParams = new URLSearchParams(window.location.search);
+        const tagsParam = urlParams.get('tags');
+        const currentTags = (tagsParam && !without_tegs) ? tagsParam.split(',') : [];
+
+		if (currentTags) {
+			const currentTagsStr = currentTags.join(',');
+            url += `?tags=${encodeURIComponent(currentTagsStr)}`;
         }
         
         const data = await request(url);
-        displayRecipes(data.recipes, tag);
-        loadTags();
+        displayRecipes(data.recipes, currentTags);
+        loadTags(currentTags);
     }
 
-    async function loadTags() {
+    async function loadTags(currentTags = []) {
         const data = await request('/api/tags');
         const tagsList = document.getElementById('tagsList');
         
@@ -122,7 +124,7 @@
         
         let html = '<div class="d-flex flex-wrap gap-1">';
         data.tags.forEach(tag => {
-            const isActive = currentTag === tag.name;
+            const isActive = currentTags.includes(tag.name);
             html += `
                 <button class="btn btn-sm ${isActive ? 'btn-primary' : 'btn-outline-secondary'}" 
                         onclick="filterByTag('${tag.name}')" 
@@ -135,9 +137,31 @@
         tagsList.innerHTML = html;
     }
 
-    function filterByTag(tag) {
-        loadRecipes(tag);
-    }
+	function filterByTag(tag) {
+	    const url = new URL(window.location);
+	    const params = new URLSearchParams(url.search);
+	    
+	    // Получаем текущие теги из URL
+	    let currentTags = params.get('tags') ? params.get('tags').split(',') : [];
+	    
+	    // Добавляем новый тег (если еще нет)
+	    if (!currentTags.includes(tag)) {
+	        currentTags.push(tag);
+	    } else {
+			currentTags = currentTags.filter(t => t !== tag);
+		}
+	    
+	    // Обновляем URL
+	    if (currentTags.length > 0) {
+	        params.set('tags', currentTags.join(','));
+	    } else {
+	        params.delete('tags');
+	    }
+	    
+	    url.search = params.toString();
+	    window.history.pushState({}, '', url);
+	    loadRecipes();
+	}
 
     async function addRecipe() {
         const title = document.getElementById('title').value.trim();
@@ -161,13 +185,13 @@
         }
     }
 
-    function displayRecipes(recipes, tag = null) {
+    function displayRecipes(recipes, currentTags = []) {
         const container = document.getElementById('recipesContainer');
         const pageTitle = document.getElementById('pageTitle');
         
         // Обновляем заголовок
-        if (tag) {
-            pageTitle.textContent = `Recipes with tag: ${tag}`;
+        if (currentTags.length > 0) {
+            pageTitle.textContent = `Recipes with tags: ${currentTags.join(', ')}`;
         } else {
             pageTitle.textContent = 'All Recipes';
         }
@@ -175,7 +199,7 @@
         if (!recipes || recipes.length === 0) {
             container.innerHTML = `
                 <div class="text-center text-muted my-5">
-                    <p>${tag ? `No recipes found with tag: ${tag}` : 'No recipes found. Add your first recipe!'}</p>
+                    <p>${(currentTags) ? `No recipes found with tags: ${currentTags.join(', ')}` : 'No recipes found. Add your first recipe!'}</p>
                 </div>
             `;
             return;
@@ -223,7 +247,7 @@
         const result = await request(`/api/recipes/${recipeId}`, 'DELETE');
         if (result && result.success) {
             alert('Recipe deleted successfully!');
-            loadRecipes(currentTag);
+            loadRecipes();
         }
     }
 

@@ -106,7 +106,7 @@
         if (recipeData.tags && recipeData.tags.length > 0) {
             tagsDiv.innerHTML = recipeData.tags.map(tag => 
                 `<span class="badge bg-light text-dark me-1 mb-1" 
-                      onclick="window.location.href='/?tag=${encodeURIComponent(tag)}'"
+                      onclick="window.location.href='/?tags=${encodeURIComponent(tag)}'"
                       style="cursor: pointer;">
                     ${tag}
                 </span>`
