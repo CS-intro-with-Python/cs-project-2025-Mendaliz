@@ -191,18 +191,9 @@
                                 <h5 class="card-title mb-1">${recipe.title}</h5>
                                 <small class="text-muted">Created: ${recipe.created_at}</small>
                             </div>
-                            <div class="dropdown">
-                                <button class="btn btn-sm btn-outline-secondary" type="button" 
-                                        data-bs-toggle="dropdown">
-                                    <i class="bi bi-three-dots"></i> Actions
-                                </button>
-                                <ul class="dropdown-menu">
-                                    <li><a class="dropdown-item" href="/recipe/${recipe.id}">View</a></li>
-                                    <li><a class="dropdown-item" href="/recipe/${recipe.id}/edit">Edit</a></li>
-                                    <li><hr class="dropdown-divider"></li>
-                                    <li><a class="dropdown-item text-danger" href="#" onclick="deleteRecipe(${recipe.id})">Delete</a></li>
-                                </ul>
-                            </div>
+							<a class="btn btn-sm btn-outline-secondary" type="button" href="/recipe/${recipe.id}">
+								View
+				            </a>
                         </div>
                         
                         ${recipe.tags.length > 0 ? `
