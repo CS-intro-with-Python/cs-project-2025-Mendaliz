@@ -145,17 +145,14 @@
 	    const url = new URL(window.location);
 	    const params = new URLSearchParams(url.search);
 	    
-	    // Получаем текущие теги из URL
 	    let currentTags = params.get('tags') ? params.get('tags').split(',') : [];
 	    
-	    // Добавляем новый тег (если еще нет)
 	    if (!currentTags.includes(tag)) {
 	        currentTags.push(tag);
 	    } else {
 			currentTags = currentTags.filter(t => t !== tag);
 		}
 	    
-	    // Обновляем URL
 	    if (currentTags.length > 0) {
 	        params.set('tags', currentTags.join(','));
 	    } else {
@@ -194,7 +191,6 @@
         const container = document.getElementById('recipesContainer');
         const pageTitle = document.getElementById('pageTitle');
         
-        // Обновляем заголовок
         if (currentTags.length > 0) {
             pageTitle.textContent = `Recipes with tags: ${currentTags.join(', ')}`;
         } else {
@@ -265,7 +261,6 @@
         document.getElementById('tags').value = '';
     }
 
-    // Загружаем рецепты при загрузке страницы
     document.addEventListener('DOMContentLoaded', function() {
         loadRecipes();
     });
