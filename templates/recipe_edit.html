@@ -19,6 +19,17 @@
                     <label class="form-label">Title *</label>
                     <input type="text" class="form-control" id="title" placeholder="Recipe name">
                 </div>
+
+				<div class="mb-3">
+				    <label class="form-label">Rating</label>
+				    <select class="form-select" id="rate">
+				        {% for i in range(0, 11) %}
+				            <option value="{{ i }}">
+				                {{ i }}
+				            </option>
+				        {% endfor %}
+				    </select>
+				</div>
                 
                 <div class="mb-3">
                     <label class="form-label">Source URL (optional)</label>
@@ -89,6 +100,7 @@
         if (!recipeData) return;
         
         document.getElementById('title').value = recipeData.title || '';
+		document.getElementById('rate').value = recipeData.rate || '';
         document.getElementById('url').value = recipeData.url || '';
 		document.getElementById('description').value = recipeData.description || '';
         document.getElementById('content').value = recipeData.content || '';
@@ -97,6 +109,7 @@
 
     async function saveRecipe() {
         const title = document.getElementById('title').value.trim();
+		const rate = parseInt(document.getElementById('rate').value.trim()) || 5;
         const url = document.getElementById('url').value.trim();
 		const description = document.getElementById('description').value.trim();
         const content = document.getElementById('content').value.trim();
@@ -108,7 +121,7 @@
         }
         
         const updated = await request(`/api/recipes/${recipeId}`, 'PUT', {
-            title, url, description, content, tags
+            title, rate, url, description, content, tags
         });
         
         if (updated) {

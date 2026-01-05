@@ -21,6 +21,7 @@ class Recipe(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, nullable=False)
     title = db.Column(db.String(200), nullable=False)
+    rate = db.Column(db.SmallInteger, default=5)
     url = db.Column(db.String(500))
     description = db.Column(db.Text)
     content = db.Column(db.Text)
@@ -114,6 +115,7 @@ def create_recipe():
     new_recipe = Recipe(
         user_id=session['user_id'],
         title=data['title'],
+        rate=data.get('rate', 5),
         url=data.get('url', ''),
         description=data.get('description', ''),
         content=data.get('content', ''),
@@ -125,7 +127,8 @@ def create_recipe():
     
     return jsonify({
         'id': new_recipe.id,
-        'title': new_recipe.title
+        'title': new_recipe.title,
+        'rate': new_recipe.rate
     }), 201
 
 @app.route('/api/recipes', methods=['GET'])
@@ -133,7 +136,7 @@ def get_recipes():
     if 'user_id' not in session:
         return jsonify({'error': 'Not authenticated'}), 401
     
-    query = Recipe.query.filter_by(user_id=session['user_id']).order_by(Recipe.created_at.desc())
+    query = Recipe.query.filter_by(user_id=session['user_id']).order_by(Recipe.rate.desc())
     
     tags = request.args.get('tags')
     if tags:
@@ -147,6 +150,7 @@ def get_recipes():
         result.append({
             'id': recipe.id,
             'title': recipe.title,
+            'rate': recipe.rate,
             'description': recipe.description,
             'tags': json.loads(recipe.tags),
             'created_at': recipe.created_at.strftime('%Y-%m-%d %H:%M')
@@ -166,6 +170,7 @@ def get_recipe(recipe_id):
     return jsonify({
         'id': recipe.id,
         'title': recipe.title,
+        'rate': recipe.rate,
         'url': recipe.url,
         'description': recipe.description,
         'content': recipe.content,
@@ -185,6 +190,7 @@ def update_recipe(recipe_id):
         return jsonify({'error': 'Recipe not found'}), 404
     
     recipe.title = data.get('title', recipe.title)
+    recipe.rate = data.get('rate', recipe.rate)
     recipe.url = data.get('url', recipe.url)
     recipe.description = data.get('description', recipe.description)
     recipe.content = data.get('content', recipe.content)
@@ -194,7 +200,8 @@ def update_recipe(recipe_id):
     
     return jsonify({
         'id': recipe.id,
-        'title': recipe.title
+        'title': recipe.title,
+        'rate': recipe.rate
     }), 200
 
 @app.route('/api/recipes/<int:recipe_id>', methods=['DELETE'])

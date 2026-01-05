@@ -31,6 +31,16 @@
                     <input type="text" class="form-control" id="tags" placeholder="breakfast, easy, dessert">
                     <small class="text-muted">Separate with commas</small>
                 </div>
+				<div class="mb-3">
+				    <label class="form-label">Rating</label>
+				    <select class="form-select" id="rate">
+				        {% for i in range(0, 11) %}
+				            <option value="{{ i }}" {% if i == 5 %}selected{% endif %}>
+				                {{ i }}
+				            </option>
+				        {% endfor %}
+				    </select>
+				</div>
                 <button class="btn btn-primary w-100" onclick="addRecipe()">Save Recipe</button>
             </div>
         </div>
@@ -166,6 +176,7 @@
 
     async function addRecipe() {
         const title = document.getElementById('title').value.trim();
+		const rate = parseInt(document.getElementById('rate').value.trim()) || 5;
         const url = document.getElementById('url').value.trim();
 		const description = document.getElementById('description').value.trim();
         const content = document.getElementById('content').value.trim();
@@ -177,7 +188,7 @@
         }
         
         const recipe = await request('/api/recipes', 'POST', {
-            title, url, description, content, tags
+            title, rate, url, description, content, tags
         });
         
         if (recipe) {
@@ -217,6 +228,7 @@
                                 <small class="text-muted">Created: ${recipe.created_at}</small>
 								<p class="card-text mb-1">${recipe.description}</p>
                             </div>
+			                <span class="fw-bold">Rate: ${recipe.rate}</span>
 							<a class="btn btn-sm btn-outline-secondary" type="button" href="/recipe/${recipe.id}">
 								View
 				            </a>
@@ -255,6 +267,7 @@
 
     function clearForm() {
         document.getElementById('title').value = '';
+		document.getElementById('rate').value = 5;
         document.getElementById('url').value = '';
 		document.getElementById('description').value = '';
         document.getElementById('content').value = '';
