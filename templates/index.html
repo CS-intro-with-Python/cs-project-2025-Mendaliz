@@ -121,9 +121,13 @@
     async function loadRecipes(without_tegs = 0) {
         let url = '/api/recipes';
 
+		if (without_tegs) {
+			window.location.href = '/';
+		}
+
 		const urlParams = new URLSearchParams(window.location.search);
         const tagsParam = urlParams.get('tags');
-        const currentTags = (tagsParam && !without_tegs) ? tagsParam.split(',') : [];
+        const currentTags = (tagsParam) ? tagsParam.split(',') : [];
 
 		if (currentTags) {
 			const currentTagsStr = currentTags.join(',');
