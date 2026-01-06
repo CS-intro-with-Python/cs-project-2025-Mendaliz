@@ -73,6 +73,9 @@
     <div class="col-md-8">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h2 id="pageTitle">All Recipes</h2>
+            <button class="btn btn-outline-success" onclick="makeCheckList()">
+                Checklist
+            </button>
             <button class="btn btn-outline-success" onclick="loadRecipes()">
                 Refresh
             </button>
@@ -241,6 +244,13 @@
 								<p class="card-text mb-1">${recipe.description}</p>
                             </div>
 			                <span class="fw-bold">Rate: ${recipe.rate}</span>
+			                <div class="form-check">
+			                    <input class="form-check-input" type="checkbox" name="recipeCheck" 
+			                           value="${recipe.id}" id="check${recipe.id}">
+			                    <label class="form-check-label" for="check${recipe.id}">
+			                        Add in checklist
+			                    </label>
+			                </div>
 							<a class="btn btn-sm btn-outline-secondary" type="button" href="/recipe/${recipe.id}">
 								View
 				            </a>
@@ -286,6 +296,21 @@
         document.getElementById('content').value = '';
         document.getElementById('tags').value = '';
     }
+
+	function makeCheckList() {
+	    const url = new URL(window.location);
+		url.pathname = '/recipe/checklist'
+	    const params = new URLSearchParams(url.search);
+
+	    const checkboxes = [...document.querySelectorAll('input[name="recipeCheck"]:checked')].map(cb => cb.value);
+		
+	    if (checkboxes.length > 0) {
+	        params.set('recipe_ids', checkboxes.join(','));
+		}
+	    
+	    url.search = params.toString();
+	    window.location.assign(url);
+	}
 
     document.addEventListener('DOMContentLoaded', function() {
         loadRecipes();

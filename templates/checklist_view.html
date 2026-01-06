@@ -1,0 +1,90 @@
+{% extends "base.html" %}
+
+{% block title %}Recipe - CookBook{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h1 id="recipeTitle">Loading...</h1>
+            </div>
+            <div>
+                <a href="/" class="btn btn-outline-secondary me-2">Back to Recipes</a>
+            </div>
+        </div>
+
+        <div class="card mb-4">
+            <div class="card-body">
+                <div>
+                    <h5>Products:</h5>
+                    <pre id="recipeProducts" class="bg-light p-3 rounded" style="white-space: pre-wrap;"></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    async function request(url, method='GET', data=null) {
+        try {
+            const options = { method };
+            if (data) {
+                options.headers = {'Content-Type': 'application/json'};
+                options.body = JSON.stringify(data);
+            }
+            const response = await fetch(url, options);
+            
+            if (!response.ok) {
+                if (response.status === 401) {
+                    window.location.href = '/auth';
+                    return;
+                }
+                if (response.status === 404) {
+                    window.location.href = '/';
+                    return;
+                }
+                const error = await response.json().catch(() => ({error: `HTTP ${response.status}`}));
+                throw new Error(error.error || `HTTP ${response.status}`);
+            }
+            
+            return await response.json();
+        } catch (error) {
+            console.error('Request failed:', error);
+            alert('Error: ' + error.message);
+            return null;
+        }
+    }
+
+    async function loadChecklist() {
+	    const url = new URL(window.location);
+        let mealsData = await request(`/api/meals` + url.search);
+        
+        if (!mealsData) return;
+
+		console.log(mealsData);
+        
+        document.title = 'Checklist - CookBook';
+        document.getElementById('recipeTitle').textContent = "Checklist";
+
+		const ingrPre = document.getElementById('recipeProducts');
+		if (mealsData.meals && Object.keys(mealsData.meals).length > 0) {
+		    const ingredients = Object.values(mealsData.meals);
+		    
+		    ingrPre.textContent = ingredients.map(ingr => 
+		        `${ingr['name']}: ${ingr['amount']} ${ingr['unit']}`
+		    ).join('\n');
+		    
+		    console.log('Ingredients:', ingredients);
+		} else {
+		    ingrPre.textContent = 'No recipes chosen.';
+		}
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+	    loadChecklist();
+    });
+</script>
+{% endblock %}

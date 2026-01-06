@@ -245,6 +245,50 @@ def get_tags():
     
     return jsonify({'tags': tags_with_count})
 
+@app.route('/api/meals')
+def get_meals():
+    if 'user_id' not in session:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    recipe_ids = request.args.get('recipe_ids').split(',')
+    user_recipes = Recipe.query.filter_by(user_id=session['user_id']).filter(Recipe.id.in_(recipe_ids)).all()
+    ingredients = {}
+    
+    for recipe in user_recipes:
+        recipe_ingredients = json.loads(recipe.ingredients)
+        for ingredient in recipe_ingredients:
+            name = ingredient.get('name', '')
+            amount = int(ingredient.get('amount', 0))
+            unit = ingredient.get('unit', '')
+            
+            key = f"{name}_{unit}"
+            
+            if key in ingredients:
+                ingredients[key]['amount'] += amount
+            else:
+                ingredients[key] = {
+                    'name': name,
+                    'amount': amount,
+                    'unit': unit
+                }
+    
+    return jsonify({"meals": ingredients})
+
+#{
+#    Milk_ml:
+#	    {
+#	        name: Milk,
+#	        amount: sum(Milk with unit),
+#	        unit: ml
+#	    }
+#}
+
+@app.route('/recipe/checklist')
+def view_checklist():
+    if 'user_id' not in session:
+        return redirect(url_for('auth_page'))
+    return render_template('checklist_view.html')
+
 @app.route('/recipe/<int:recipe_id>')
 def view_recipe_page(recipe_id):
     if 'user_id' not in session:
