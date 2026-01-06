@@ -49,6 +49,24 @@ def logout():
     session.clear()
     return redirect(url_for('auth_page'))
 
+@app.route('/recipe/checklist')
+def view_checklist():
+    if 'user_id' not in session:
+        return redirect(url_for('auth_page'))
+    return render_template('checklist_view.html', username=session.get('username'))
+
+@app.route('/recipe/<int:recipe_id>')
+def view_recipe_page(recipe_id):
+    if 'user_id' not in session:
+        return redirect(url_for('auth_page'))
+    return render_template('recipe_view.html', username=session.get('username'), recipe_id=recipe_id)
+
+@app.route('/recipe/<int:recipe_id>/edit')
+def edit_recipe_page(recipe_id):
+    if 'user_id' not in session:
+        return redirect(url_for('auth_page'))
+    return render_template('recipe_edit.html', username=session.get('username'), recipe_id=recipe_id)
+
 @app.route('/api/register', methods=['POST'])
 def register():
     data = request.json
@@ -250,7 +268,10 @@ def get_meals():
     if 'user_id' not in session:
         return jsonify({'error': 'Not authenticated'}), 401
     
-    recipe_ids = request.args.get('recipe_ids').split(',')
+    recipe_ids = request.args.get('recipe_ids')
+    if recipe_ids is None:
+        return jsonify({})
+    recipe_ids = recipe_ids.split(',')
     user_recipes = Recipe.query.filter_by(user_id=session['user_id']).filter(Recipe.id.in_(recipe_ids)).all()
     ingredients = {}
     
@@ -282,24 +303,6 @@ def get_meals():
 #	        unit: ml
 #	    }
 #}
-
-@app.route('/recipe/checklist')
-def view_checklist():
-    if 'user_id' not in session:
-        return redirect(url_for('auth_page'))
-    return render_template('checklist_view.html')
-
-@app.route('/recipe/<int:recipe_id>')
-def view_recipe_page(recipe_id):
-    if 'user_id' not in session:
-        return redirect(url_for('auth_page'))
-    return render_template('recipe_view.html', recipe_id=recipe_id)
-
-@app.route('/recipe/<int:recipe_id>/edit')
-def edit_recipe_page(recipe_id):
-    if 'user_id' not in session:
-        return redirect(url_for('auth_page'))
-    return render_template('recipe_edit.html', recipe_id=recipe_id)
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
