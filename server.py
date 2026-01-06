@@ -21,12 +21,13 @@ class Recipe(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, nullable=False)
     title = db.Column(db.String(200), nullable=False)
-    rate = db.Column(db.SmallInteger, default=5)
     url = db.Column(db.String(500))
     description = db.Column(db.Text)
+    ingredients = db.Column(db.Text, default='[]')
     content = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.now)
     tags = db.Column(db.Text, default='[]')
+    rate = db.Column(db.SmallInteger, default=5)
 
 with app.app_context():
     db.create_all()
@@ -115,11 +116,12 @@ def create_recipe():
     new_recipe = Recipe(
         user_id=session['user_id'],
         title=data['title'],
-        rate=data.get('rate', 5),
         url=data.get('url', ''),
         description=data.get('description', ''),
+        ingredients=json.dumps(data.get('ingredients', [])),
         content=data.get('content', ''),
-        tags=json.dumps(data.get('tags', []))
+        tags=json.dumps(data.get('tags', [])),
+        rate=data.get('rate', 5)
     )
     
     db.session.add(new_recipe)
@@ -173,6 +175,7 @@ def get_recipe(recipe_id):
         'rate': recipe.rate,
         'url': recipe.url,
         'description': recipe.description,
+        'ingredients': json.loads(recipe.ingredients),
         'content': recipe.content,
         'tags': json.loads(recipe.tags),
         'created_at': recipe.created_at.strftime('%Y-%m-%d %H:%M')
@@ -193,6 +196,7 @@ def update_recipe(recipe_id):
     recipe.rate = data.get('rate', recipe.rate)
     recipe.url = data.get('url', recipe.url)
     recipe.description = data.get('description', recipe.description)
+    recipe.ingredients = json.dumps(data.get('ingredients', []))
     recipe.content = data.get('content', recipe.content)
     recipe.tags = json.dumps(data.get('tags', []))
     

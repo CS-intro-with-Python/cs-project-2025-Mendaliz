@@ -5,6 +5,25 @@
 {% block content %}
 <div class="row">
     <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Filters</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Filter by Tag</label>
+                    <div id="tagsList">
+                        <small class="text-muted">Loading tags...</small>
+                    </div>
+                </div>
+                <div class="d-grid gap-2">
+                    <button class="btn btn-outline-primary" onclick="loadRecipes(1)">
+                        Show All Recipes
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <div class="card mb-4">
             <div class="card-header">
                 <h5 class="mb-0">Add New Recipe</h5>
@@ -21,6 +40,11 @@
                 <div class="mb-3">
                     <label class="form-label">Description</label>
                     <textarea class="form-control" id="description" rows="1" placeholder="Short description..."></textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Ingredients</label>
+                    <textarea class="form-control" id="ingredients" rows="3" 
+					placeholder="<name>: <amount> <unit>&#10<name>: <amount> <unit>"></textarea>
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Instructions</label>
@@ -42,25 +66,6 @@
 				    </select>
 				</div>
                 <button class="btn btn-primary w-100" onclick="addRecipe()">Save Recipe</button>
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="card-header">
-                <h5 class="mb-0">Filters</h5>
-            </div>
-            <div class="card-body">
-                <div class="mb-3">
-                    <label class="form-label">Filter by Tag</label>
-                    <div id="tagsList">
-                        <small class="text-muted">Loading tags...</small>
-                    </div>
-                </div>
-                <div class="d-grid gap-2">
-                    <button class="btn btn-outline-primary" onclick="loadRecipes(1)">
-                        Show All Recipes
-                    </button>
-                </div>
             </div>
         </div>
     </div>
@@ -179,6 +184,13 @@
 		const rate = parseInt(document.getElementById('rate').value.trim()) || 5;
         const url = document.getElementById('url').value.trim();
 		const description = document.getElementById('description').value.trim();
+        const ingredients = document.getElementById('ingredients').value.split('\n').map(t => t.trim()).filter(t => t).map(ingr => {
+			const name = ingr.split(':')[0].trim();
+			const amount = ingr.split(' ')[ingr.split(' ').length - 2].trim();
+			const unit = ingr.split(' ')[ingr.split(' ').length - 1].trim();
+
+			return {"name": name, "amount": amount, "unit": unit}
+		});
         const content = document.getElementById('content').value.trim();
         const tags = document.getElementById('tags').value.split(',').map(t => t.trim()).filter(t => t);
         
@@ -188,7 +200,7 @@
         }
         
         const recipe = await request('/api/recipes', 'POST', {
-            title, rate, url, description, content, tags
+            title, rate, url, description, ingredients, content, tags
         });
         
         if (recipe) {
@@ -270,6 +282,7 @@
 		document.getElementById('rate').value = 5;
         document.getElementById('url').value = '';
 		document.getElementById('description').value = '';
+        document.getElementById('ingredients').value = '';
         document.getElementById('content').value = '';
         document.getElementById('tags').value = '';
     }

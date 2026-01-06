@@ -30,7 +30,12 @@
                 
                 <div>
                     <h5>Description</h5>
-                    <pre id="descriptionContent" class="bg-light p-3 rounded" style="white-space: pre-wrap;"></pre>
+                    <pre id="recipeDescription" class="bg-light p-3 rounded" style="white-space: pre-wrap;"></pre>
+                </div>
+                
+                <div>
+                    <h5>Ingredients</h5>
+                    <pre id="recipeIngredients" class="bg-light p-3 rounded" style="white-space: pre-wrap;"></pre>
                 </div>
                 
                 <div>
@@ -101,8 +106,16 @@
             document.getElementById('recipeUrlLink').style.display = 'none';
         }
         
-        document.getElementById('descriptionContent').textContent = recipeData.description || 'No description provided.';
+        document.getElementById('recipeDescription').textContent = recipeData.description || 'No description provided.';
         document.getElementById('recipeContent').textContent = recipeData.content || 'No instructions provided.';
+        const ingrPre = document.getElementById('recipeIngredients');
+		if (recipeData.ingredients && recipeData.ingredients.length > 0) {
+			ingrPre.textContent = recipeData.ingredients.map(ingr => 
+				`${ingr['name']}: ${ingr['amount']} ${ingr['unit']}`
+			).join('\n');
+		} else {
+			ingrPre.textContent = 'No ingredients provided.';
+		}
         
         const tagsDiv = document.getElementById('recipeTags');
         if (recipeData.tags && recipeData.tags.length > 0) {

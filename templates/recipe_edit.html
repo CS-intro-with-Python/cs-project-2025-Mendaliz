@@ -19,17 +19,6 @@
                     <label class="form-label">Title *</label>
                     <input type="text" class="form-control" id="title" placeholder="Recipe name">
                 </div>
-
-				<div class="mb-3">
-				    <label class="form-label">Rating</label>
-				    <select class="form-select" id="rate">
-				        {% for i in range(0, 11) %}
-				            <option value="{{ i }}">
-				                {{ i }}
-				            </option>
-				        {% endfor %}
-				    </select>
-				</div>
                 
                 <div class="mb-3">
                     <label class="form-label">Source URL (optional)</label>
@@ -43,6 +32,12 @@
                 </div>
                 
                 <div class="mb-3">
+                    <label class="form-label">Ingredients</label>
+                    <textarea class="form-control" id="ingredients" rows="5" 
+                              placeholder="<name>: <amount> <unit>&#10<name>: <amount> <unit>"></textarea>
+                </div>
+                
+                <div class="mb-3">
                     <label class="form-label">Instructions</label>
                     <textarea class="form-control" id="content" rows="10" 
                               placeholder="Step-by-step instructions..."></textarea>
@@ -53,6 +48,17 @@
                     <input type="text" class="form-control" id="tags" 
                            placeholder="breakfast, easy, dessert">
                     <small class="text-muted">Separate tags with commas</small>
+
+				<div class="mb-3">
+				    <label class="form-label">Rating</label>
+				    <select class="form-select" id="rate">
+				        {% for i in range(0, 11) %}
+				            <option value="{{ i }}">
+				                {{ i }}
+				            </option>
+				        {% endfor %}
+				    </select>
+				</div>
                 </div>
             </div>
         </div>
@@ -103,6 +109,14 @@
 		document.getElementById('rate').value = recipeData.rate || '';
         document.getElementById('url').value = recipeData.url || '';
 		document.getElementById('description').value = recipeData.description || '';
+        const ingrTextarea = document.getElementById('ingredients');
+		if (recipeData.ingredients && recipeData.ingredients.length > 0) {
+			ingrTextarea.value = recipeData.ingredients.map(ingr => 
+				`${ingr['name']}: ${ingr['amount']} ${ingr['unit']}`
+			).join('\n');
+		} else {
+			ingrTextarea.value = '';
+		}
         document.getElementById('content').value = recipeData.content || '';
         document.getElementById('tags').value = recipeData.tags ? recipeData.tags.join(', ') : '';
     }
@@ -112,6 +126,13 @@
 		const rate = parseInt(document.getElementById('rate').value.trim()) || 5;
         const url = document.getElementById('url').value.trim();
 		const description = document.getElementById('description').value.trim();
+        const ingredients = document.getElementById('ingredients').value.split('\n').map(t => t.trim()).filter(t => t).map(ingr => {
+			const name = ingr.split(':')[0].trim();
+			const amount = ingr.split(' ')[ingr.split(' ').length - 2].trim();
+			const unit = ingr.split(' ')[ingr.split(' ').length - 1].trim();
+
+			return {"name": name, "amount": amount, "unit": unit}
+		});
         const content = document.getElementById('content').value.trim();
         const tags = document.getElementById('tags').value.split(',').map(t => t.trim()).filter(t => t);
         
@@ -121,7 +142,7 @@
         }
         
         const updated = await request(`/api/recipes/${recipeId}`, 'PUT', {
-            title, rate, url, description, content, tags
+            title, rate, url, description, ingredients, content, tags
         });
         
         if (updated) {
