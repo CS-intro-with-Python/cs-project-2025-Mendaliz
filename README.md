@@ -1,83 +1,91 @@
-# CS_2024_project
+# CookBook
 
 ## Description
 
-Простое приложение для хранения рецептов с системой тегов и списком продуктов. 
+A simple recipe storage application with a tagging system and shopping list functionality.
 
-### Основной сценарий:
-1. Сохраняете рецепт (можно добавить ссылку на источник)
-2. Редактируете рецепт при необходимости
-3. Фильтруете по тегам для быстрого поиска
-4. Выбираете рецепты, которые планируете приготовить
-5. Проверяете достаточное количество продуктов
+### Main Scenario:
+1. Save a recipe (can include a link to the source)
+2. Edit the recipe if necessary
+3. Filter by tags for quick search
+4. Select recipes you plan to cook
+5. Check if you have enough ingredients
 
-## Интерфейс
+## Interface
 
-### Главная страница (`/`)
-- Панель фильтров по тегам
-- Форма добавления нового рецепта
-- Список всех рецептов с пагинацией
-- Для каждого рецепта:
-  - Кнопка "View" - просмотр
-  - Чекбокс для добавления в список продуктов
-  - Кликабельные теги
-- Кнопка для создания списка продуктов
-- Кнопка для обнавления рецептов
+### Main Page (`/`)
+- Tag filter panel
+- Form for adding new recipes
+- List of all recipes with pagination
+- For each recipe:
+  - "View" button to view details
+  - Checkbox to add to shopping list
+  - Clickable tags
+- Button to create shopping list
+- Button to update recipes
 
-### Страница рецепта (`/recipe/{id}`)
-- Полная информация о рецепте
-- Ссылка на источник (если есть)
-- Список тегов (кликабельные)
-- Кнопки редактирования и удаления
+### Recipe Page (`/recipe/{id}`)
+- Complete recipe information
+- Link to source (if available)
+- List of tags (clickable)
+- Edit and delete buttons
 
-### Страница редактирования (`/recipe/{id}/edit`)
-- Форма редактирования всех полей рецепта
-- Кнопка сохранения изменений
-- Кнопка отмены
+### Edit Page (`/recipe/{id}/edit`)
+- Form to edit all recipe fields
+- Save changes button
+- Cancel button
 
-### Страница списка продуктов (`/recipe/checklist`)
-- Информация о продуктах, необходимых для приготовления выбранных рецептов
+### Shopping List Page (`/recipe/checklist`)
+- Information about ingredients needed for selected recipes
 
-## Веб-страницы
+## Web Pages
 
-| Путь | Описание | Требует авторизации |
-|------|----------|---------|
-| `/` | Главная страница со списком рецептов | да |
-| `/auth` | Страница входа/регистрации | нет |
-| `/logout` | Выход из системы | да |
-| `/recipe/{id}` | Просмотр конкретного рецепта | да |
-| `/recipe/{id}/edit` | Редактирование рецепта | да |
-| `/recipe/checklist` | Просмотр списка покупок | да |
+| Path | Description | Requires Authentication |
+|------|-------------|-------------------------|
+| `/` | Main page with recipe list | yes |
+| `/auth` | Login/registration page | no |
+| `/logout` | Logout | yes |
+| `/recipe/{id}` | View specific recipe | yes |
+| `/recipe/{id}/edit` | Edit recipe | yes |
+| `/recipe/checklist` | View shopping list | yes |
 
-## Сводка API
+## API Summary
 
-| Метод | Путь | Описание | Требует авторизации |
-|-------|------|----------|---------------------|
-| POST | `/api/register` | Регистрация | нет |
-| POST | `/api/login` | Вход | нет |
-| GET | `/api/check-auth` | Проверка авторизации | нет |
-| GET | `/api/recipes` | Список рецептов | да |
-| POST | `/api/recipes` | Создать рецепт | да |
-| GET | `/api/recipes/{id}` | Получить рецепт | да |
-| PUT | `/api/recipes/{id}` | Обновить рецепт | да |
-| DELETE | `/api/recipes/{id}` | Удалить рецепт | да |
-| GET | `/api/tags` | Получить все теги | да |
-| GET | `/api/meals` | Получить все ингредиенты по рецептам | да |
+| Method | Path | Description | Requires Authentication |
+|--------|------|-------------|-------------------------|
+| POST | `/api/register` | User registration | no |
+| POST | `/api/login` | User login | no |
+| GET | `/api/check-auth` | Check authentication status | no |
+| GET | `/api/recipes` | Get recipe list | yes |
+| POST | `/api/recipes` | Create recipe | yes |
+| GET | `/api/recipes/{id}` | Get specific recipe | yes |
+| PUT | `/api/recipes/{id}` | Update recipe | yes |
+| DELETE | `/api/recipes/{id}` | Delete recipe | yes |
+| GET | `/api/tags` | Get all tags | yes |
+| GET | `/api/meals` | Get all ingredients for selected recipes | yes |
 
 ## Setup
 
-Describe the steps to set up the environment and run the application. This can be a bash script or docker commands.
-
 ```
-Your commands
+# Build the Docker image
+docker build -t flask-app .
 
+# Run the container
+docker run -d -p 8080:5000 --name flask-container flask-app
+
+# Test the application
+curl http://localhost:8080/
 ```
 
 ## Requirements
 
-Flask
-requests
-docker
+Backend Framework: Flask 2.3.3
+
+Programming Language: Python 3.9+
+
+Containerization: Docker
+
+Dependencies: See requirements.txt
 
 ## Git
 

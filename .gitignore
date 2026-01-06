@@ -2,3 +2,5 @@
 trash
 .idea
 instance
+create.sh
+delete.sh
