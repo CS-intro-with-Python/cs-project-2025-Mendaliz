@@ -127,7 +127,7 @@
 
 		if (currentTags) {
 			const currentTagsStr = currentTags.join(',');
-            url += `?tags=${encodeURIComponent(currentTagsStr)}`;
+            url += `?tags=${currentTagsStr}`;
         }
         
         const data = await request(url);
@@ -316,19 +316,4 @@
         loadRecipes();
     });
 </script>
-
-<style>
-    .recipe-card {
-        border-left: 4px solid #4a9eff;
-        transition: all 0.2s;
-    }
-    .recipe-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    }
-    .badge:hover {
-        background-color: #4a9eff !important;
-        color: white !important;
-    }
-</style>
 {% endblock %}
