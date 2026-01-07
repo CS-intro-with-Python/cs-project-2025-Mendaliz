@@ -28,7 +28,7 @@ jobs:
               python -m pytest tests/ -v --tb=short 2>&1 || exit 1
             "
       
-      - name: Check container status
+      - name: Container logs
         run: |
           echo "📋 Container logs:"
           docker logs flask-server || echo "No logs yet"
