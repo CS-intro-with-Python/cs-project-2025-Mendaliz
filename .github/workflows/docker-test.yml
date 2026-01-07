@@ -23,7 +23,7 @@ jobs:
       - name: Run Docker container
         run: |
           echo "🚀 Starting Flask server in Docker..."
-          docker run --rm flask-app \
+          docker run --name flask-server flask-app \
             bash -c "
               python -m pytest tests/ -v --tb=short 2>&1 || exit 1
             "
