@@ -70,8 +70,8 @@
         document.getElementById('recipeTitle').textContent = "Checklist";
 
 		const ingrPre = document.getElementById('recipeProducts');
-		if (mealsData.meals && Object.keys(mealsData.meals).length > 0) {
-		    const ingredients = Object.values(mealsData.meals);
+		if (mealsData.meals && mealsData.meals.length > 0) {
+		    const ingredients = mealsData.meals;
 		    
 		    ingrPre.textContent = ingredients.map(ingr => 
 		        `${ingr['name']}: ${ingr['amount']} ${ingr['unit']}`

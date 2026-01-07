@@ -272,36 +272,41 @@ def get_meals():
         return jsonify({})
     recipe_ids = recipe_ids.split(',')
     user_recipes = Recipe.query.filter_by(user_id=session['user_id']).filter(Recipe.id.in_(recipe_ids)).all()
-    ingredients = {}
+    ingredients = []
     
     for recipe in user_recipes:
         recipe_ingredients = json.loads(recipe.ingredients)
         for ingredient in recipe_ingredients:
+            added = 0
             name = ingredient.get('name', '')
-            amount = int(ingredient.get('amount', 0))
+            amount = ingredient.get('amount', 0)
             unit = ingredient.get('unit', '')
-            
-            key = f"{name}_{unit}"
-            
-            if key in ingredients:
-                ingredients[key]['amount'] += amount
-            else:
-                ingredients[key] = {
-                    'name': name,
-                    'amount': amount,
-                    'unit': unit
-                }
+            for i in range(len(ingredients)):
+                prep = ingredients[i]
+                if prep['name'] == name and prep['unit'] == unit:
+                    try:
+                        int(prep['amount']), int(amount)
+                        prep['amount'] += int(amount)
+                        added = 1
+                    except:
+                        pass
+            if added == 0:
+                try:
+                    amount = int(amount)
+                except:
+                    pass
+                ingredients.append({'name': name, 'amount': amount, 'unit': unit})
     
-    return jsonify({"meals": {key: ingredients[key] for key in sorted(ingredients)}})
+    return jsonify({"meals": sorted(ingredients, key=lambda t: (t['name'], t['unit']))})
 
-#{
-#    Milk_ml:
-#	    {
-#	        name: Milk,
-#	        amount: sum(Milk with unit),
-#	        unit: ml
-#	    }
-#}
+#[
+#    
+#    {
+#        name: Milk,
+#        amount: sum(Milk with unit),
+#        unit: ml
+#    }
+#]
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
