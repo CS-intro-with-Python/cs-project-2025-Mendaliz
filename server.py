@@ -4,9 +4,8 @@ from datetime import datetime
 import json
 
 app = Flask(__name__)
-app.secret_key = 'your-secret-key-here'
+app.secret_key = 'my-secret-key-here'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
 
@@ -298,15 +297,6 @@ def get_meals():
                 ingredients.append({'name': name, 'amount': amount, 'unit': unit})
     
     return jsonify({"meals": sorted(ingredients, key=lambda t: (t['name'], t['unit']))})
-
-#[
-#    
-#    {
-#        name: Milk,
-#        amount: sum(Milk with unit),
-#        unit: ml
-#    }
-#]
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)

@@ -4,3 +4,5 @@ trash
 instance
 create.sh
 delete.sh
+*__pycache__
+.pytest_cache
