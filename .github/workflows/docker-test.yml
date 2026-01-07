@@ -5,58 +5,40 @@ on:
     branches: [ main, dev ]
   pull_request:
     branches: [ main, dev ]
+  workflow_dispatch:
 
 jobs:
   test-docker-flask:
     runs-on: ubuntu-latest
     
     steps:
-      # 1. Клонируем репозиторий
       - name: Checkout code
         uses: actions/checkout@v4
         
-      # 2. Собираем Docker образ
       - name: Build Docker image
         run: |
           echo "🐳 Building Docker image..."
           docker build -t flask-app .
           
-      # 3. Запускаем контейнер в фоне
       - name: Run Docker container
         run: |
           echo "🚀 Starting Flask server in Docker..."
-          docker run -d -p 8080:8080 --name flask-server flask-app
-          echo "⏳ Waiting for server to start..."
-          sleep 5
-          
-      # 4. Проверяем что контейнер запущен
+          docker run --rm flask-app \
+            bash -c "
+              python -m pytest tests/ -v --tb=short 2>&1 || exit 1
+            "
+      
       - name: Check container status
         run: |
-          echo "📊 Container status:"
-          docker ps
           echo "📋 Container logs:"
           docker logs flask-server || echo "No logs yet"
           
-      # 5. Запускаем клиент для тестирования
-      - name: Run client test
-        run: |
-          echo "🧪 Running client test..."
-          python client.py
-          
-      ## 6. Запускаем клиент для тестирования
-      #- name: Run client_fail test
-      #  run: |
-      #    echo "🧪 Running client_fail test..."
-      #    python client_fail.py
-    
-      # 7. Success notification
       - name: Success notification
         if: success()
         run: |
           echo "::notice title=All Tests Passed::✅ Docker health check completed successfully!"
           echo "🎉 ${OK}ALL CHECKS PASSED${RST} - Server is running correctly"
 
-      # 8. Останавливаем контейнер
       - name: Stop container
         if: always()
         run: |
