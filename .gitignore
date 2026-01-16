@@ -7,3 +7,4 @@ delete.sh
 *__pycache__
 .pytest_cache
 instance
+logs

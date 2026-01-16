@@ -2,10 +2,87 @@ from flask import Flask, request, jsonify, render_template, session, redirect, u
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 import json
+import logging
+from logging.handlers import RotatingFileHandler
+import os
+from functools import wraps
+
+
+def setup_sql_logger(app):
+    """Logs for SQL requests"""
+    
+    if not os.path.exists('logs'):
+        os.makedirs('logs')
+        
+    formatter = logging.Formatter(
+        '%(asctime)s - %(name)s - [%(levelname)s] - %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
+    
+    app_logger = app.logger
+    app_logger.handlers.clear()
+    app_logger.setLevel(logging.INFO)
+    
+    app_handler = RotatingFileHandler(
+        'logs/app.log',
+        maxBytes=5*1024*1024,
+        backupCount=3
+    )
+    app_handler.setFormatter(formatter)
+    app_logger.addHandler(app_handler)
+    
+    console_handler = logging.StreamHandler()
+    console_handler.setFormatter(formatter)
+    app_logger.addHandler(console_handler)
+    
+    werkzeug_logger = logging.getLogger('werkzeug')
+    werkzeug_logger.setLevel(logging.INFO)
+    werkzeug_logger.propagate = False
+    
+    werkzeug_handler = RotatingFileHandler(
+        'logs/werkzeug.log',
+        maxBytes=10*1024*1024,
+        backupCount=5
+    )
+    werkzeug_handler.setFormatter(formatter)
+    werkzeug_logger.addHandler(werkzeug_handler)
+    
+    sql_logger = logging.getLogger('sqlalchemy.engine')
+    sql_logger.setLevel(logging.DEBUG)
+    sql_logger.propagate = False
+    
+    sql_handler = RotatingFileHandler(
+        'logs/sql.log',
+        maxBytes=10*1024*1024,
+        backupCount=5
+    )
+    sql_handler.setFormatter(formatter)
+    sql_logger.addHandler(sql_handler)
+
+def log_response(func):
+    """Decorator for logging requests"""
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        app.logger.info(f"Request to {request.path} - Method: {request.method}")
+        
+        response = func(*args, **kwargs)
+        
+        if isinstance(response, tuple) and len(response) == 2:
+            data, status = response
+            app.logger.info(f"Response from {request.path} - Status: {status}")
+            if status >= 400:
+                app.logger.error(f"Error response: {data.get_data(as_text=True).rstrip()}")
+        else:
+            app.logger.info(f"Response from {request.path}")
+        
+        return response
+    return wrapper
 
 app = Flask(__name__)
 app.secret_key = 'my-secret-key-here'
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///database.db'
+
+setup_sql_logger(app)
 
 db = SQLAlchemy(app)
 
@@ -47,6 +124,7 @@ def auth_page():
 def logout():
     session.clear()
     return redirect(url_for('auth_page'))
+
 @app.route('/recipe/<int:recipe_id>')
 def view_recipe_page(recipe_id):
     if 'user_id' not in session:
@@ -66,6 +144,7 @@ def view_checklist():
     return render_template('checklist_view.html', username=session.get('username'))
 
 @app.route('/api/register', methods=['POST'])
+@log_response
 def register():
     data = request.json
     
@@ -93,6 +172,7 @@ def register():
     }), 201
 
 @app.route('/api/login', methods=['POST'])
+@log_response
 def login():
     data = request.json
     
@@ -113,12 +193,14 @@ def login():
         'username': user.username
     }), 200
 
+@log_response
 @app.route('/api/check-auth', methods=['GET'])
 def check_auth():
     if 'user_id' in session:
         return jsonify({'authenticated': True, 'username': session.get('username')}), 200
     return jsonify({'authenticated': False}), 401
 
+@log_response
 @app.route('/api/recipes', methods=['GET'])
 def get_recipes():
     if 'user_id' not in session:
@@ -144,9 +226,10 @@ def get_recipes():
             'created_at': recipe.created_at.strftime('%Y-%m-%d %H:%M')
         })
     
-    return jsonify({'recipes': result})
+    return jsonify({'recipes': result}), 200
 
 @app.route('/api/recipes', methods=['POST'])
+@log_response
 def create_recipe():
     if 'user_id' not in session:
         return jsonify({'error': 'Not authenticated'}), 401
@@ -177,6 +260,7 @@ def create_recipe():
     }), 201
 
 @app.route('/api/recipes/<int:recipe_id>', methods=['GET'])
+@log_response
 def get_recipe(recipe_id):
     if 'user_id' not in session:
         return jsonify({'error': 'Not authenticated'}), 401
@@ -195,9 +279,10 @@ def get_recipe(recipe_id):
         'content': recipe.content,
         'tags': json.loads(recipe.tags),
         'created_at': recipe.created_at.strftime('%Y-%m-%d %H:%M')
-    })
+    }), 200
 
 @app.route('/api/recipes/<int:recipe_id>', methods=['PUT'])
+@log_response
 def update_recipe(recipe_id):
     if 'user_id' not in session:
         return jsonify({'error': 'Not authenticated'}), 401
@@ -225,6 +310,7 @@ def update_recipe(recipe_id):
     }), 200
 
 @app.route('/api/recipes/<int:recipe_id>', methods=['DELETE'])
+@log_response
 def delete_recipe(recipe_id):
     if 'user_id' not in session:
         return jsonify({'error': 'Not authenticated'}), 401
@@ -236,9 +322,10 @@ def delete_recipe(recipe_id):
     db.session.delete(recipe)
     db.session.commit()
     
-    return jsonify({'success': True, 'message': 'Recipe deleted'})
+    return jsonify({'success': True, 'message': 'Recipe deleted'}), 200
 
 @app.route('/api/tags')
+@log_response
 def get_tags():
     if 'user_id' not in session:
         return jsonify({'error': 'Not authenticated'}), 401
@@ -259,16 +346,17 @@ def get_tags():
         ).count()
         tags_with_count.append({'name': tag, 'count': count})
     
-    return jsonify({'tags': tags_with_count})
+    return jsonify({'tags': tags_with_count}), 200
 
 @app.route('/api/meals')
+@log_response
 def get_meals():
     if 'user_id' not in session:
         return jsonify({'error': 'Not authenticated'}), 401
     
     recipe_ids = request.args.get('recipe_ids')
     if recipe_ids is None:
-        return jsonify({})
+        return jsonify({}), 400
     recipe_ids = recipe_ids.split(',')
     user_recipes = Recipe.query.filter_by(user_id=session['user_id']).filter(Recipe.id.in_(recipe_ids)).all()
     ingredients = []
@@ -296,7 +384,7 @@ def get_meals():
                     pass
                 ingredients.append({'name': name, 'amount': amount, 'unit': unit})
     
-    return jsonify({"meals": sorted(ingredients, key=lambda t: (t['name'], t['unit']))})
+    return jsonify({"meals": sorted(ingredients, key=lambda t: (t['name'], t['unit']))}), 200
 
 if __name__ == '__main__':
     app.run(debug=True, host='0.0.0.0', port=5000)
